@@ -21,12 +21,10 @@ def is_interesting_conversation(messages: List[str], title: str) -> bool:
     """
 
     if len(messages) < 3:
-        print("*** len messages < 3")
         return False
 
     total_length = sum(len(msg) for msg in messages)
     if total_length < 4:  # Skip very short conversations
-        print(f"** total len {total_length}")
         return False
 
     # Look for technical indicators
@@ -44,7 +42,6 @@ def is_interesting_conversation(messages: List[str], title: str) -> bool:
     content = "\n".join(messages)
     for pattern in technical_patterns:
         if re.search(pattern, content):
-            print("*** boring tech word")
             return False
 
     return True
