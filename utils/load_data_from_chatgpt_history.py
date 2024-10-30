@@ -19,12 +19,14 @@ def is_interesting_conversation(messages: List[str], title: str) -> bool:
     - Contains code blocks or technical content
     - Non-trivial conversation length
     """
-    breakpoint()
+
     if len(messages) < 3:
+        print("*** len messages < 3")
         return False
 
     total_length = sum(len(msg) for msg in messages)
     if total_length < 4:  # Skip very short conversations
+        print(f"** total len {total_length}")
         return False
 
     # Look for technical indicators
@@ -42,14 +44,10 @@ def is_interesting_conversation(messages: List[str], title: str) -> bool:
     content = "\n".join(messages)
     for pattern in technical_patterns:
         if re.search(pattern, content):
+            print("*** boring tech word")
             return False
 
-    # Check title for technical terms
-    technical_terms = ["code", "programming", "thinking"]
-    if any(term in title.lower() for term in technical_terms):
-        return True
-
-    return False
+    return True
 
 
 def extract_conversations(zip_path: Path) -> Dict:
@@ -93,7 +91,7 @@ def extract_conversations(zip_path: Path) -> Dict:
                 messages = []
                 current_node = conversation.get("current_node")
                 mapping = conversation.get("mapping", {})
-                
+
                 while current_node:
                     node = mapping.get(current_node, {})
                     message = node.get("message") if node else None
@@ -101,25 +99,31 @@ def extract_conversations(zip_path: Path) -> Dict:
                         parts = extract_message_parts(message)
                         author = get_author_name(message)
                         if parts and len(parts) > 0 and len(parts[0]) > 0:
-                            if author != "system" or message.get("metadata", {}).get("is_user_system_message"):
+                            if author != "system" or message.get("metadata", {}).get(
+                                "is_user_system_message"
+                            ):
                                 messages.append(f"{author}: {parts[0]}")
                     current_node = node.get("parent") if node else None
-                
+
                 return messages[::-1]  # Reverse to get chronological order
 
             # Extract messages using the new function
             messages = get_conversation_messages(conv_data)
-            
+
             # Combine messages into content
             content = "\n\n".join(messages)
 
             # Only store interesting conversations
             if is_interesting_conversation(messages, title):
                 print(f"Processing interesting conversation: {title}")
-                
+
                 # Parse create time
                 create_time = conv_data.get("create_time", 0)
-                created_at = datetime.fromtimestamp(create_time) if create_time else datetime.utcnow()
+                created_at = (
+                    datetime.fromtimestamp(create_time)
+                    if create_time
+                    else datetime.utcnow()
+                )
 
                 # Create document directly in database
                 with Session(engine) as session:
