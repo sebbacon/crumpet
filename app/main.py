@@ -197,19 +197,17 @@ def search_documents(
     Search documents using FTS5
     """
     # Use a subquery to get matching document IDs from FTS
-    sql = text("""
-        WITH matching_docs AS (
-            SELECT rowid 
-            FROM documentfts 
-            WHERE documentfts MATCH :query
-        )
-        SELECT document.* 
-        FROM document
-        JOIN matching_docs ON document.id = matching_docs.rowid
-    """)
-
-    # Execute the query and get full Document objects
-    result = session.exec(select(Document).from_statement(sql).params(query=q))
+    # First get matching document IDs from FTS
+    matching_docs = session.exec(
+        text("SELECT rowid FROM documentfts WHERE documentfts MATCH :query")
+        .params(query=q)
+    ).all()
+    
+    # Then fetch complete Document objects for those IDs
+    result = session.exec(
+        select(Document)
+        .where(Document.id.in_([doc[0] for doc in matching_docs]))
+    )
     documents = [DocumentRead.model_validate(doc) for doc in result]
 
     return documents
