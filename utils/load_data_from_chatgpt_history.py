@@ -153,16 +153,19 @@ def extract_tags(zip_path: Path) -> Dict:
     conversations_data = extract_messages(zip_path)
     content = ""
     count = 1
-    for conv_data in random.sample(conversations_data, 50):
+    for conv_data in random.sample(conversations_data, 100):
         title = conv_data["title"]
         messages = conv_data["messages"]
         print(f"Title: {title}")
         content += f"# Snippet {count}: {title}\n\n"
 
         # Combine messages into content
-        content += "\n\n".join(messages)
-        content += "\n\n-----\n\n"
-        count += 1
+        joined = "\n\n".join(messages)
+        if "```" in joined:
+            continue
+        else:
+            content += f"{joined}\n\n-----\n\n"
+            count += 1
     response = model.prompt(
         """Return an array of json tags that could categorise the following text snippets. There are 50 separated with ----- markers. 
             
@@ -182,7 +185,7 @@ def extract_tags(zip_path: Path) -> Dict:
         % content
     )
     tags = response.text()
-    update_tags(tags, skip_on_fail=False)
+    return update_tags(tags, skip_on_fail=False)
 
 
 def update_tags(tags, skip_on_fail=True):
@@ -207,9 +210,10 @@ def update_tags(tags, skip_on_fail=True):
                     description=tag_data.get("description", ""),
                 )
                 session.add(tag)
-                session.commit()
-                session.refresh(tag)
             document_tags.append(tag)
+        session.commit()
+        for tag in document_tags:
+            session.refresh(tag)
         return document_tags
 
 
@@ -271,6 +275,7 @@ def main():
 
     # Process conversations
     tags = extract_tags(zip_path)
+    breakpoint()
     extract_conversations(zip_path)
     print("Interesting ChatGPT conversations loaded successfully!")
 
