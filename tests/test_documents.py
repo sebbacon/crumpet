@@ -10,7 +10,7 @@ from app.config import Settings
 @pytest.fixture(name="settings")
 def settings_fixture():
     return Settings(
-        database_url="sqlite://",
+        database_url="sqlite:///:memory:",
         api_key="dev_api_key"
     )
 
