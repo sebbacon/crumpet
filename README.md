@@ -26,7 +26,7 @@ Set up SSL certificate:
     sudo dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
 
     # Configure Let's Encrypt email
-    dokku config:set --no-restart crumpet DOKKU_LETSENCRYPT_EMAIL=your-email@example.com
+    dokku letsencrypt:set crumpet email seb.bacon@gmail.com
 
     # Enable Let's Encrypt
     dokku letsencrypt:enable crumpet
