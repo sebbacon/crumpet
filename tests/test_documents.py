@@ -2,24 +2,21 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 import pytest
+from unittest import mock
 from app.main import app, get_session, create_db_and_tables
 from app.models import Document, Tag
-from app.config import get_settings, Settings
+from app.config import Settings
 
-def get_test_settings():
+@pytest.fixture(name="settings")
+def settings_fixture():
     return Settings(
         database_url="sqlite://",
         api_key="dev_api_key"
     )
 
-# Ensure settings override is applied
-app.dependency_overrides[get_settings] = get_test_settings
-settings = get_test_settings()
-
 @pytest.fixture(name="session")
-def session_fixture():
-    # Create a unique in-memory database URL for each test
-    database_url = f"sqlite:///:memory:"
+def session_fixture(settings):
+    database_url = "sqlite:///:memory:"
     engine = create_engine(
         database_url,
         connect_args={"check_same_thread": False},
@@ -32,14 +29,14 @@ def session_fixture():
     engine.dispose()
 
 @pytest.fixture(name="client")
-def client_fixture(session: Session):
+def client_fixture(session: Session, settings: Settings):
     def get_session_override():
         return session
 
-    app.dependency_overrides[get_session] = get_session_override
-    client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
+    with mock.patch('app.main.get_settings', return_value=settings):
+        with mock.patch('app.main.get_session', side_effect=get_session_override):
+            client = TestClient(app)
+            yield client
 
 def test_create_document(client: TestClient, session: Session):
     # Create test tags first
