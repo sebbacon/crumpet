@@ -76,7 +76,7 @@ def create_db_and_tables(db_engine=engine):
                     new.id, 
                     new.title, 
                     COALESCE(new.description, ''),
-                    new.content,
+                    new.content, 
                     COALESCE(
                         (
                             SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
@@ -112,7 +112,7 @@ def create_db_and_tables(db_engine=engine):
                     new.id, 
                     new.title, 
                     COALESCE(new.description, ''),
-                    new.content,
+                    new.content, 
                     COALESCE(
                         (
                             SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
@@ -326,6 +326,7 @@ def create_document(document_data: DocumentCreate, session: SessionDep, _: APIKe
         title=document_data.title,
         description=document_data.description,
         content=document_data.content,
+        interestingness=document_data.interestingness,
         tags=tags,
         created_at=document_data.created_at or datetime.utcnow(),
         updated_at=document_data.updated_at or datetime.utcnow(),

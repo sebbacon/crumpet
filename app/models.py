@@ -49,6 +49,7 @@ class Document(SQLModel, table=True):
     title: str = Field(index=True)
     description: Optional[str] = None
     content: str = Field(default="")
+    interestingness: Optional[int] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -61,6 +62,7 @@ class DocumentRead(BaseModel):
     title: str
     description: Optional[str] = None
     content: str
+    interestingness: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     tags: List[Tag] = []
@@ -73,6 +75,7 @@ class DocumentCreate(BaseModel):
     title: str
     description: Optional[str] = None
     content: str
+    interestingness: Optional[int] = Field(default=None, ge=0, le=2)
     tag_ids: List[int] = Field(default_factory=list)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

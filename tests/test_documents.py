@@ -62,6 +62,7 @@ def test_create_document(client: TestClient, session: Session):
         "title": "Test Document",
         "description": "This is a test document",
         "content": "Here is the full content of the test document",
+        "interestingness": 2,
         "tag_ids": [tag1.id, tag2.id],
         "created_at": "2024-01-01T00:00:00",
         "updated_at": "2024-01-01T00:00:00"
