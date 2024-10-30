@@ -10,6 +10,7 @@ from utils.load_data import load_data
 from sqlmodel import Session, select
 from app.main import engine
 import llm
+import random
 
 model = llm.get_model("gpt-4o-mini")
 
@@ -54,7 +55,7 @@ def tag_conversation(messages: List[str], title: str) -> bool:
             [{"name": tag.name, "description": tag.description} for tag in tags]
         )
     response = model.prompt(
-        """Return an array of json tags that categories the following text. At least 1 tag, and no more than 4 tags. Do not return it in a code fence. Just return the raw json, starting with `[`]
+        """Return an array of json tags that categories the following text. At least 1 tag, and no more than 4 tags. Do not return it in a code fence. No code fences, your output should start with `[{"}`]
 
         Tag names should be lower-cased and snake-cased.
 
@@ -88,6 +89,7 @@ def extract_message_parts(message):
         return content.get("parts", [])
     return []
 
+
 def get_author_name(message):
     """Get the author name from a message."""
     author = message.get("author", {}).get("role", "")
@@ -96,6 +98,7 @@ def get_author_name(message):
     elif author == "system":
         return "System"
     return author
+
 
 def get_conversation_messages(conversation):
     """Extract messages from a conversation in chronological order."""
@@ -118,16 +121,17 @@ def get_conversation_messages(conversation):
 
     return messages[::-1]  # Reverse to get chronological order
 
+
 def extract_messages(zip_path: Path) -> List[Dict]:
     """
     Extract all conversations and their messages from a ChatGPT export zip file
     """
     conversations_data = []
-    
+
     with zipfile.ZipFile(zip_path) as zf:
         with zf.open("conversations.json") as f:
             conversations = json.load(f)
-            
+
         for conv_data in conversations:
             title = conv_data.get("title", "Untitled Conversation")
             messages = get_conversation_messages(conv_data)
@@ -137,29 +141,92 @@ def extract_messages(zip_path: Path) -> List[Dict]:
                 if create_time
                 else datetime.utcnow()
             )
-            
-            conversations_data.append({
-                "title": title,
-                "messages": messages,
-                "created_at": created_at
-            })
-            
+
+            conversations_data.append(
+                {"title": title, "messages": messages, "created_at": created_at}
+            )
+
     return conversations_data
+
+
+def extract_tags(zip_path: Path) -> Dict:
+    conversations_data = extract_messages(zip_path)
+    content = ""
+    count = 1
+    for conv_data in random.sample(conversations_data, 50):
+        title = conv_data["title"]
+        messages = conv_data["messages"]
+        print(f"Title: {title}")
+        content += f"# Snippet {count}: {title}\n\n"
+
+        # Combine messages into content
+        content += "\n\n".join(messages)
+        content += "\n\n-----\n\n"
+        count += 1
+    response = model.prompt(
+        """Return an array of json tags that could categorise the following text snippets. There are 50 separated with ----- markers. 
+            
+            A total of a maximum of 20 tags that together cover the 50 snippets. Just return the raw json, no code fences, your output should start with `[{"}`]
+
+            Tag names should be lower-cased and snake-cased.
+
+            The tags should be high-level and about the overall tone of each snippet, not about specifics. There should be a broad range of tags covering the widest range of possible topics. They should not significantly overlap
+
+            Example: [{"name": "programming", "description": "Computer Programming"}]
+
+
+    # Text to tag
+
+    %s
+    """
+        % content
+    )
+    tags = response.text()
+    update_tags(tags, skip_on_fail=False)
+
+
+def update_tags(tags, skip_on_fail=True):
+    with Session(engine) as session:
+        # Parse tags JSON and create/get Tag objects
+        try:
+            tag_list = json.loads(tags)
+        except:
+            print(f"*** invalid tag list {tags}")
+            if skip_on_fail:
+                tag_list = []
+            else:
+                raise RuntimeError("Invalid tag list")
+        document_tags = []
+        for tag_data in tag_list:
+            # Check if tag exists
+            tag = session.exec(select(Tag).where(Tag.name == tag_data["name"])).first()
+            if not tag:
+                # Create new tag if it doesn't exist
+                tag = Tag(
+                    name=tag_data["name"],
+                    description=tag_data.get("description", ""),
+                )
+                session.add(tag)
+                session.commit()
+                session.refresh(tag)
+            document_tags.append(tag)
+        return document_tags
+
 
 def extract_conversations(zip_path: Path) -> Dict:
     """
     Extract conversations from ChatGPT export zip file and store in database
     """
     conversations_data = extract_messages(zip_path)
-    
+
     for conv_data in conversations_data:
         title = conv_data["title"]
         messages = conv_data["messages"]
         print(f"Title: {title}")
-        
+
         # Combine messages into content
         content = "\n\n".join(messages)
-        
+
         # Only store interesting conversations
         interestingness = score_conversation(messages, title)
         print(f"Processing interesting conversation: {title}")
@@ -168,32 +235,10 @@ def extract_conversations(zip_path: Path) -> Dict:
             print(title, tags)
         else:
             tags = "[]"
-            
-        # Create document and handle tags in database
-        with Session(engine) as session:
-            # Parse tags JSON and create/get Tag objects
-            try:
-                tag_list = json.loads(tags)
-            except:
-                print(f"*** invalid tag list {tags}")
-                tag_list = []
-            document_tags = []
-            for tag_data in tag_list:
-                # Check if tag exists
-                tag = session.exec(
-                    select(Tag).where(Tag.name == tag_data["name"])
-                ).first()
-                if not tag:
-                    # Create new tag if it doesn't exist
-                    tag = Tag(
-                        name=tag_data["name"],
-                        description=tag_data.get("description", ""),
-                    )
-                    session.add(tag)
-                    session.commit()
-                    session.refresh(tag)
-                document_tags.append(tag)
 
+        # Create document and handle tags in database
+        document_tags = update_tags(tags)
+        with Session(engine) as session:
             # Create document with tags
             document = Document(
                 tags=document_tags,
@@ -205,7 +250,7 @@ def extract_conversations(zip_path: Path) -> Dict:
             )
             session.add(document)
             session.commit()
-    
+
     # Return empty dict since we're not using load_data anymore
     return {"tags": {}, "documents": []}
 
@@ -225,6 +270,7 @@ def main():
         sys.exit(1)
 
     # Process conversations
+    tags = extract_tags(zip_path)
     extract_conversations(zip_path)
     print("Interesting ChatGPT conversations loaded successfully!")
 
