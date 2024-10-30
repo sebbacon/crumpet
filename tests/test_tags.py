@@ -54,3 +54,29 @@ def test_list_tags_with_data(session: Session, client: TestClient):
     assert len(tags) == 2
     assert tags[0]["name"] == "python"
     assert tags[1]["name"] == "fastapi"
+
+def test_create_tag(client: TestClient):
+    tag_data = {
+        "name": "docker",
+        "description": "Docker containers"
+    }
+    response = client.post(
+        "/tags/",
+        headers={"X-API-Key": "dev_api_key"},
+        json=tag_data
+    )
+    assert response.status_code == 201
+    created_tag = response.json()
+    assert created_tag["name"] == tag_data["name"]
+    assert created_tag["description"] == tag_data["description"]
+    assert created_tag["documents_count"] == 0
+    assert "id" in created_tag
+
+def test_create_tag_unauthorized(client: TestClient):
+    tag_data = {
+        "name": "docker",
+        "description": "Docker containers"
+    }
+    response = client.post("/tags/", json=tag_data)
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not authenticated"
