@@ -17,11 +17,14 @@ class Tag(SQLModel, table=True):
     description: Optional[str] = None
     
     # Relationships
+    documents: List["Document"] = Relationship(back_populates="tags", link_model=DocumentTag)
+
     @property
     def documents_count(self) -> int:
         return len(self.documents)
-    
-    documents: List["Document"] = Relationship(back_populates="tags", link_model=DocumentTag)
+
+    class Config:
+        json_schema_extra = {"example": {"id": 1, "name": "python", "description": "Python programming", "documents_count": 0}}
 
 class TagCreate(BaseModel):
     name: str
