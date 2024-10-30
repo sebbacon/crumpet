@@ -34,7 +34,11 @@ async def lifespan(app: FastAPI):
     yield  # Run app
 
 
-app = FastAPI(title="Crumpet API", description=description, lifespan=lifespan)
+servers = [{"url": "https://crumpet.bacon.boutique", "description": "Main server"}]
+
+app = FastAPI(
+    title="Crumpet API", description=description, lifespan=lifespan, servers=servers
+)
 
 # Database setup
 settings = get_settings()
