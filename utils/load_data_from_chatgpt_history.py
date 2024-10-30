@@ -25,7 +25,7 @@ def score_conversation(messages: List[str], title: str) -> bool:
 
     content = "\n".join(messages)
     response = model.prompt(
-        f"""Score the following text for interestingness on a scale of 0-2, as follows. Just return a number (0, 1 or 2); nothing else
+        f"""Score the following text for interestingness on a scale of 0-2, as follows. Just return a number. It must be 0, 1 or 2; nothing else. It should not have a dot after it.
 
 0: Short text defining words, short technical solutions, or playful silly things, or longer text which is mostly programming or code               
 2: Extensive text exploring historical, philosophical, or otherwise stimulating or emotional topics in-depth, or shorter text about unusual or intellectual or psychological topics, or things that are like diary entries. Not programming-based things unless they are mostly conceptual.                            
@@ -38,7 +38,9 @@ def score_conversation(messages: List[str], title: str) -> bool:
 """
     )
     score = response.text()
-    assert score in ["0", "1", "2"]
+    if score not in ["0", "1", "2"]:
+        print(f"Weird score {score}")
+        return None
     return int(score)
 
 
@@ -52,21 +54,28 @@ def tag_conversation(messages: List[str], title: str) -> bool:
             [{"name": tag.name, "description": tag.description} for tag in tags]
         )
     response = model.prompt(
-        f"""Return an array of json tags that categories the following text.
+        """Return an array of json tags that categories the following text. At least 1 tag, and no more than 4 tags. Do not return it in a code fence. Just return the raw json, starting with `[`]
 
-        Consider existing tags first, and prefer these if they are appropriate.
+        Tag names should be lower-cased and snake-cased.
+
+        The tags should be high-level and about the overall tone, not about specifics.
+
+        Consider using existing tags, if they are appropriate. 
 
         If none of them fit, or some fit but some new ones would be suitable, then invent new tags as necessary.
 
+        In particular, look out for things that look like journal entries and tag them accordingly.
+
         Example: [{"name": "programming", "description": "Computer Programming"}]
 
-        Existing tags: {existing_tags}
+        Existing tags: %s
 
 
 # Text to tag
 
-{content}
+%s
 """
+        % (existing_tags, content)
     )
     result = response.text()
     return result
@@ -138,10 +147,11 @@ def extract_conversations(zip_path: Path) -> Dict:
             # Only store interesting conversations
             interestingness = score_conversation(messages, title)
             print(f"Processing interesting conversation: {title}")
-            if interestingness > 0:
+            if interestingness:
                 tags = tag_conversation(messages, title)
+                print(title, tags)
             else:
-                tags = []
+                tags = "[]"
 
             # Parse create time
             create_time = conv_data.get("create_time", 0)
@@ -154,7 +164,11 @@ def extract_conversations(zip_path: Path) -> Dict:
             # Create document and handle tags in database
             with Session(engine) as session:
                 # Parse tags JSON and create/get Tag objects
-                tag_list = json.loads(tags)
+                try:
+                    tag_list = json.loads(tags)
+                except:
+                    print(f"*** invalid tag list {tags}")
+                    tag_list = []
                 document_tags = []
                 for tag_data in tag_list:
                     # Check if tag exists
@@ -165,7 +179,7 @@ def extract_conversations(zip_path: Path) -> Dict:
                         # Create new tag if it doesn't exist
                         tag = Tag(
                             name=tag_data["name"],
-                            description=tag_data.get("description", "")
+                            description=tag_data.get("description", ""),
                         )
                         session.add(tag)
                         session.commit()
