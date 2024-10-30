@@ -2,12 +2,21 @@ from typing import Annotated, List
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Security, Query
 from fastapi.security.api_key import APIKeyHeader
+from contextlib import asynccontextmanager
 from sqlmodel import Session, SQLModel, create_engine, select, func
+from sqlalchemy import text
+
 from .models import DocumentFTS
 from .models import Tag, Document, TagCreate, TagUpdate, DocumentCreate, DocumentRead, DocumentTag, TagWithCount, DocumentAddTags
 from .config import get_settings
 
-app = FastAPI(title="Markdown API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup event
+    create_db_and_tables()  # Ensure this runs on app startup
+    yield  # Run app
+
+app = FastAPI(title="Markdown API", lifespan=lifespan)
 
 # Database setup
 settings = get_settings()
@@ -19,7 +28,7 @@ def create_db_and_tables():
     
     # Create FTS5 virtual table
     with Session(engine) as session:
-        session.exec("""
+        session.exec(text("""
             CREATE VIRTUAL TABLE IF NOT EXISTS documentfts 
             USING fts5(
                 title, 
@@ -29,10 +38,10 @@ def create_db_and_tables():
                 content='document',
                 content_rowid='id'
             )
-        """)
+        """))
         
         # Create triggers to keep FTS index updated
-        session.exec("""
+        session.exec(text("""
             CREATE TRIGGER IF NOT EXISTS document_ai AFTER INSERT ON document BEGIN
                 INSERT INTO documentfts(rowid, title, description, content, tag_data)
                 VALUES (
@@ -48,15 +57,15 @@ def create_db_and_tables():
                     )
                 );
             END;
-        """)
+        """))
         
-        session.exec("""
+        session.exec(text("""
             CREATE TRIGGER IF NOT EXISTS document_ad AFTER DELETE ON document BEGIN
                 DELETE FROM documentfts WHERE rowid = old.id;
             END;
-        """)
+        """))
         
-        session.exec("""
+        session.exec(text("""
             CREATE TRIGGER IF NOT EXISTS document_au AFTER UPDATE ON document BEGIN
                 DELETE FROM documentfts WHERE rowid = old.id;
                 INSERT INTO documentfts(rowid, title, description, content, tag_data)
@@ -73,9 +82,9 @@ def create_db_and_tables():
                     )
                 );
             END;
-        """)
+        """))
         
-        session.exec("""
+        session.exec(text("""
             CREATE TRIGGER IF NOT EXISTS documenttag_ai AFTER INSERT ON documenttag BEGIN
                 UPDATE documentfts 
                 SET tag_data = (
@@ -86,9 +95,9 @@ def create_db_and_tables():
                 )
                 WHERE rowid = new.document_id;
             END;
-        """)
+        """))
         
-        session.exec("""
+        session.exec(text("""
             CREATE TRIGGER IF NOT EXISTS documenttag_ad AFTER DELETE ON documenttag BEGIN
                 UPDATE documentfts 
                 SET tag_data = (
@@ -99,7 +108,7 @@ def create_db_and_tables():
                 )
                 WHERE rowid = old.document_id;
             END;
-        """)
+        """))
         session.commit()
 
 def get_session():
@@ -120,10 +129,7 @@ def verify_api_key(api_key: str = Security(api_key_header)) -> str:
 
 APIKeyDep = Annotated[str, Security(verify_api_key)]
 
-# Startup event
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
+
 
 # Tags endpoints
 @app.get("/tags/", response_model=List[TagWithCount])
@@ -181,16 +187,17 @@ def search_documents(
     """
     Search documents using FTS5
     """
-    # Use raw SQL for FTS5 match query
-    sql = """
+    sql = text("""
         SELECT d.*
         FROM document d
         JOIN documentfts fts ON d.id = fts.rowid
         WHERE fts MATCH :query
-    """
-    result = session.exec(select(Document).from_statement(sql), {"query": q})
-    documents = result.all()
-    
+    """)
+
+    # Use select with from_statement for parameter binding
+    result = session.exec(select(Document).from_statement(sql).params(query=q))
+    documents = [DocumentRead.model_validate(row) for row in result]
+
     return documents
 
 @app.get("/documents/{document_id}", response_model=DocumentRead)
@@ -241,23 +248,7 @@ def add_tags_to_document(
     session.commit()
     session.refresh(document)
     return document
-def search_documents(
-    session: SessionDep,
-    _: APIKeyDep,
-    q: str = Query(..., min_length=3)
-):
-    """
-    Search documents using FTS5
-    """
-    documents = session.exec(
-        select(Document)
-        .where(Document.id.in_(
-            select(DocumentFTS.rowid)
-            .where(DocumentFTS.match(q))
-        ))
-    ).all()
-    
-    return documents
+
 
 @app.post("/documents/", response_model=DocumentRead, status_code=201)
 def create_document(

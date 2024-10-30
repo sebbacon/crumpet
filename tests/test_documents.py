@@ -200,6 +200,7 @@ def test_search_documents(client: TestClient, session: Session):
         "/documents/search?q=Python",
         headers={"X-API-Key": "dev_api_key"}
     )
+    breakpoint()
     assert response.status_code == 200
     results = response.json()
     assert len(results) == 1
