@@ -16,7 +16,7 @@ Set up persistent storage for the SQLite database:
 
     # Create storage directory
     dokku storage:ensure-directory crumpet
-    
+
     # Mount storage for SQLite database
     dokku storage:mount crumpet /var/lib/dokku/data/storage/crumpet:/app/data
 
@@ -38,7 +38,7 @@ Set up the required environment variables:
 
     # Generate a secure API key
     API_KEY=$(openssl rand -hex 32)
-    
+
     # Set API key
     dokku config:set crumpet API_KEY=$API_KEY
 
@@ -66,3 +66,7 @@ For local development, create a `.env` file with:
 Then run:
 
     uvicorn app.main:app --reload
+
+## Loading data
+
+    python -m utils.load_data utils/example_data.json
