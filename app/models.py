@@ -74,6 +74,8 @@ class DocumentCreate(BaseModel):
     description: Optional[str] = None
     content: str
     tag_ids: List[int] = Field(default_factory=list)
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 class DocumentAddTags(BaseModel):
