@@ -1,3 +1,5 @@
+import tempfile
+import os
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
@@ -16,17 +18,24 @@ def settings_fixture():
 
 @pytest.fixture(name="session")
 def session_fixture(settings):
-    database_url = "sqlite:///file::memory:?cache=shared"
+    # Create a temporary file for the SQLite database
+    temp_db = tempfile.NamedTemporaryFile(delete=False)
+    database_url = f"sqlite:///{temp_db.name}"
+    
     engine = create_engine(
         database_url,
-        connect_args={"check_same_thread": False, "uri": True},
+        connect_args={"check_same_thread": False},
         poolclass=StaticPool
     )
     create_db_and_tables(engine)  # This will create both SQLModel tables and FTS tables
+    
     with Session(engine) as session:
         yield session
-    # Clean up by disposing the engine
+    
+    # Clean up
     engine.dispose()
+    temp_db.close()
+    os.unlink(temp_db.name)  # Remove the temporary database file
 
 @pytest.fixture(name="client")
 def client_fixture(session: Session, settings: Settings):
