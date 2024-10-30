@@ -62,6 +62,52 @@ def test_create_document(client: TestClient, session: Session):
     assert len(created_doc["tags"]) == 2
     
 
+def test_get_document(client: TestClient, session: Session):
+    # Create test tags
+    tag1 = Tag(name="python", description="Python programming")
+    tag2 = Tag(name="fastapi", description="FastAPI framework")
+    session.add(tag1)
+    session.add(tag2)
+    session.commit()
+    session.refresh(tag1)
+    session.refresh(tag2)
+
+    # Create test document with tags
+    document = Document(
+        title="Test Document",
+        description="This is a test document",
+        content="Here is the content",
+        tags=[tag1, tag2]
+    )
+    session.add(document)
+    session.commit()
+    session.refresh(document)
+
+    # Get the document
+    response = client.get(
+        f"/documents/{document.id}",
+        headers={"X-API-Key": "dev_api_key"}
+    )
+    
+    assert response.status_code == 200
+    doc_data = response.json()
+    assert doc_data["title"] == "Test Document"
+    assert doc_data["description"] == "This is a test document"
+    assert doc_data["content"] == "Here is the content"
+    assert len(doc_data["tags"]) == 2
+    assert doc_data["tags"][0]["name"] == "python"
+    assert doc_data["tags"][0]["description"] == "Python programming"
+    assert doc_data["tags"][1]["name"] == "fastapi"
+    assert doc_data["tags"][1]["description"] == "FastAPI framework"
+
+def test_get_document_not_found(client: TestClient):
+    response = client.get(
+        "/documents/999",
+        headers={"X-API-Key": "dev_api_key"}
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found"
+
 def test_create_document_invalid_tags(client: TestClient):
     document_data = {
         "title": "Test Document",

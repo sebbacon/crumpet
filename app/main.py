@@ -85,6 +85,20 @@ def update_tag_description(
     session.refresh(tag)
     return tag
 
+@app.get("/documents/{document_id}", response_model=DocumentRead)
+def get_document(
+    document_id: int,
+    session: SessionDep,
+    _: APIKeyDep
+):
+    """
+    Get a document by ID including its tags
+    """
+    document = session.get(Document, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return document
+
 @app.post("/documents/", response_model=DocumentRead, status_code=201)
 def create_document(
     document_data: DocumentCreate,
