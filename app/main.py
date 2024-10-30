@@ -230,7 +230,6 @@ def search_documents(
     """
     Search documents using FTS5
     """
-    breakpoint()
     documents = session.exec(
         select(Document)
         .where(Document.id.in_(
