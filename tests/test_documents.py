@@ -7,7 +7,10 @@ from app.models import Document, Tag
 from app.config import get_settings, Settings
 
 def get_test_settings():
-    return Settings(database_url="sqlite://")
+    return Settings(
+        database_url="sqlite://",
+        api_key="dev_api_key"
+    )
 
 app.dependency_overrides[get_settings] = get_test_settings
 
