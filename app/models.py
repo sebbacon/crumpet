@@ -27,14 +27,6 @@ class TagCreate(BaseModel):
 class TagUpdate(BaseModel):
     description: str
 
-class DocumentTag(SQLModel, table=True):
-    document_id: Optional[int] = Field(
-        default=None, foreign_key="document.id", primary_key=True
-    )
-    tag_id: Optional[int] = Field(
-        default=None, foreign_key="tag.id", primary_key=True
-    )
-
 class Document(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str = Field(index=True)
