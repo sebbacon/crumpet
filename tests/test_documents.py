@@ -42,9 +42,10 @@ def test_create_document(client: TestClient, session: Session):
     # Create test tags first
     tag1 = Tag(name="python", description="Python programming")
     tag2 = Tag(name="fastapi", description="FastAPI framework")
-    session.add(tag1)
-    session.add(tag2)
+    session.add_all([tag1, tag2])
     session.commit()
+    
+    # Refresh to get the assigned IDs
     session.refresh(tag1)
     session.refresh(tag2)
 
