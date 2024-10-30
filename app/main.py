@@ -59,7 +59,8 @@ def create_db_and_tables(db_engine=engine):
                 title, 
                 description, 
                 content,
-                tag_data
+                tag_data,
+                interestingness
             )
         """
             )
@@ -70,7 +71,7 @@ def create_db_and_tables(db_engine=engine):
             text(
                 """
             CREATE TRIGGER IF NOT EXISTS document_ai AFTER INSERT ON document BEGIN
-                INSERT INTO documentfts(rowid, title, description, content, tag_data)
+                INSERT INTO documentfts(rowid, title, description, content, tag_data, interestingness)
                 VALUES (
                     new.id, 
                     new.title, 
@@ -106,7 +107,7 @@ def create_db_and_tables(db_engine=engine):
                 """
             CREATE TRIGGER IF NOT EXISTS document_au AFTER UPDATE ON document BEGIN
                 DELETE FROM documentfts WHERE rowid = old.id;
-                INSERT INTO documentfts(rowid, title, description, content, tag_data)
+                INSERT INTO documentfts(rowid, title, description, content, tag_data, interestingness)
                 VALUES (
                     new.id, 
                     new.title, 
@@ -238,18 +239,23 @@ def update_tag_description(
 
 @app.get("/documents/search", response_model=List[DocumentRead])
 def search_documents(
-    session: SessionDep, _: APIKeyDep, q: str = Query(..., min_length=3)
+    session: SessionDep, 
+    _: APIKeyDep, 
+    q: str = Query(..., min_length=3),
+    min_interestingness: int = Query(None, ge=0, le=2)
 ):
     """
     Search documents using FTS5
     """
-    # Use a subquery to get matching document IDs from FTS
-    # First get matching document IDs from FTS
-    matching_docs = session.exec(
-        text("SELECT rowid FROM documentfts WHERE documentfts MATCH :query").params(
-            query=q
-        )
-    ).all()
+    # Build the FTS query
+    query = "SELECT rowid FROM documentfts WHERE documentfts MATCH :query"
+    params = {"query": q}
+    
+    if min_interestingness is not None:
+        query += " AND CAST(interestingness AS INTEGER) >= :min_interestingness"
+        params["min_interestingness"] = min_interestingness
+
+    matching_docs = session.exec(text(query).params(**params)).all()
 
     # Then fetch complete Document objects for those IDs
     result = session.exec(
