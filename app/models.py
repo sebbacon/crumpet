@@ -15,9 +15,12 @@ class Tag(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
     description: Optional[str] = None
-    documents_count: int = Field(default=0)
     
     # Relationships
+    @property
+    def documents_count(self) -> int:
+        return len(self.documents)
+    
     documents: List["Document"] = Relationship(back_populates="tags", link_model=DocumentTag)
 
 class TagCreate(BaseModel):

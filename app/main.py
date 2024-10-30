@@ -100,11 +100,6 @@ def create_document(
         tags=tags
     )
     
-    # Update tags count
-    for tag in tags:
-        tag.documents_count += 1
-        session.add(tag)
-
     session.add(document)
     session.commit()
     session.refresh(document)
