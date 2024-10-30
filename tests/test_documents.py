@@ -61,7 +61,7 @@ def test_create_document(client: TestClient, session: Session):
         headers={"X-API-Key": "dev_api_key"},
         json=document_data
     )
-    
+    breakpoint()
     assert response.status_code == 201
     created_doc = response.json()
     assert created_doc["title"] == document_data["title"]
