@@ -1,4 +1,5 @@
 from typing import Annotated, List
+from pathlib import Path
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Security, Query
 from fastapi.security.api_key import APIKeyHeader
@@ -10,7 +11,10 @@ from .models import Tag, Document, TagCreate, TagUpdate, DocumentCreate, Documen
 from .config import get_settings
 
 
-description = open()
+# Load API description from markdown file
+description_path = Path(__file__).parent.parent / "DESCRIPTION.md"
+with open(description_path, "r") as f:
+    description = f.read()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
