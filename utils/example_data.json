@@ -1,0 +1,29 @@
+{
+    "tags": {
+        "python": "Python programming language",
+        "fastapi": "FastAPI web framework",
+        "api": "API development and design",
+        "database": "Database concepts and implementations",
+        "tutorial": "Educational content"
+    },
+    "documents": [
+        {
+            "title": "Getting Started with FastAPI",
+            "description": "A beginner's guide to FastAPI development",
+            "content": "FastAPI is a modern, fast web framework for building APIs with Python 3.6+ based on standard Python type hints...",
+            "tags": ["python", "fastapi", "api", "tutorial"]
+        },
+        {
+            "title": "Database Best Practices",
+            "description": "Learn about database design and implementation",
+            "content": "When designing a database, it's important to consider normalization, indexing, and query optimization...",
+            "tags": ["database", "tutorial"]
+        },
+        {
+            "title": "Python Web Development",
+            "description": "Building web applications with Python",
+            "content": "Python offers many frameworks for web development, including FastAPI, Flask, and Django...",
+            "tags": ["python", "tutorial"]
+        }
+    ]
+}
