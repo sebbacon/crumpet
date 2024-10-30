@@ -16,36 +16,31 @@ def settings_fixture():
         api_key="dev_api_key"
     )
 
-@pytest.fixture(name="session")
-def session_fixture(settings):
-    # Create a temporary file for the SQLite database
-    temp_db = tempfile.NamedTemporaryFile(delete=False)
-    database_url = f"sqlite:///{temp_db.name}"
-    
+@pytest.fixture(name="engine")
+def engine_fixture(settings):
     engine = create_engine(
-        database_url,
+        settings.database_url,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool
     )
-    create_db_and_tables(engine)  # This will create both SQLModel tables and FTS tables
-    
+    create_db_and_tables(engine)
+    return engine
+
+@pytest.fixture(name="session")
+def session_fixture(engine):
     with Session(engine) as session:
         yield session
-    
-    # Clean up
-    engine.dispose()
-    temp_db.close()
-    os.unlink(temp_db.name)  # Remove the temporary database file
 
 @pytest.fixture(name="client")
-def client_fixture(session: Session, settings: Settings):
+def client_fixture(engine: Session, session: Session, settings: Settings):
     def get_session_override():
         return session
 
-    with mock.patch('app.main.get_settings', return_value=settings):
-        with mock.patch('app.main.get_session', side_effect=get_session_override):
-            client = TestClient(app)
-            yield client
+    with mock.patch('app.main.get_settings', return_value=settings), \
+         mock.patch('app.main.engine', engine), \
+         mock.patch('app.main.get_session', side_effect=get_session_override):
+        client = TestClient(app)
+        yield client
 
 def test_create_document(client: TestClient, session: Session):
     # Create test tags first
