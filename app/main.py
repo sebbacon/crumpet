@@ -230,6 +230,7 @@ def search_documents(
     """
     Search documents using FTS5
     """
+    breakpoint()
     documents = session.exec(
         select(Document)
         .where(Document.id.in_(
@@ -237,6 +238,7 @@ def search_documents(
             .where(DocumentFTS.match(q))
         ))
     ).all()
+    
     return documents
 
 @app.post("/documents/", response_model=DocumentRead, status_code=201)
