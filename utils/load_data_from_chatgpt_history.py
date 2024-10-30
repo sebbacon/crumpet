@@ -143,7 +143,6 @@ def extract_conversations(zip_path: Path) -> Dict:
             else:
                 tags = []
 
-            # XXX add tag creation here -- only create tags that don't already exist
             # Parse create time
             create_time = conv_data.get("create_time", 0)
             created_at = (
@@ -152,10 +151,30 @@ def extract_conversations(zip_path: Path) -> Dict:
                 else datetime.utcnow()
             )
 
-            # Create document directly in database
+            # Create document and handle tags in database
             with Session(engine) as session:
-                # XXX also tag the document
+                # Parse tags JSON and create/get Tag objects
+                tag_list = json.loads(tags)
+                document_tags = []
+                for tag_data in tag_list:
+                    # Check if tag exists
+                    tag = session.exec(
+                        select(Tag).where(Tag.name == tag_data["name"])
+                    ).first()
+                    if not tag:
+                        # Create new tag if it doesn't exist
+                        tag = Tag(
+                            name=tag_data["name"],
+                            description=tag_data.get("description", "")
+                        )
+                        session.add(tag)
+                        session.commit()
+                        session.refresh(tag)
+                    document_tags.append(tag)
+
+                # Create document with tags
                 document = Document(
+                    tags=document_tags,
                     title=title,
                     description="",  # Empty description as requested
                     content=content,
