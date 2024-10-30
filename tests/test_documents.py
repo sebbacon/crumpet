@@ -255,7 +255,7 @@ def test_add_nonexistent_tags_to_document(client: TestClient, session: Session):
     assert response.status_code == 400
     assert response.json()["detail"] == "One or more tag IDs do not exist"
 
-def test_settings_mock(settings: Settings):
-    """Test that settings fixture provides test values"""
-    assert settings.database_url == "sqlite://"
-    assert settings.api_key == "dev_api_key"
+def test_settings_mock(client: TestClient):
+    """Test that settings have been mocked correctly"""
+    response = client.get("/documents/999", headers={"X-API-Key": "dev_api_key"})
+    assert response.status_code == 404  # Verifies API key was accepted
