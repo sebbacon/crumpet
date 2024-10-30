@@ -172,6 +172,25 @@ def update_tag_description(
     session.refresh(tag)
     return tag
 
+@app.get("/documents/search", response_model=List[DocumentRead])
+def search_documents(
+    session: SessionDep,
+    _: APIKeyDep,
+    q: str = Query(..., min_length=3)
+):
+    """
+    Search documents using FTS5
+    """
+    documents = session.exec(
+        select(Document)
+        .where(Document.id.in_(
+            select(DocumentFTS.rowid)
+            .where(DocumentFTS.match(q))
+        ))
+    ).all()
+    
+    return documents
+
 @app.get("/documents/{document_id}", response_model=DocumentRead)
 def get_document(
     document_id: int,
@@ -220,8 +239,6 @@ def add_tags_to_document(
     session.commit()
     session.refresh(document)
     return document
-
-@app.get("/documents/search", response_model=List[DocumentRead])
 def search_documents(
     session: SessionDep,
     _: APIKeyDep,
