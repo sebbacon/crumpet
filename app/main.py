@@ -9,13 +9,16 @@ from sqlalchemy import text
 from .models import Tag, Document, TagCreate, TagUpdate, DocumentCreate, DocumentRead, DocumentTag, TagWithCount, DocumentAddTags
 from .config import get_settings
 
+
+description = open()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup event
     create_db_and_tables()  # Ensure this runs on app startup
     yield  # Run app
 
-app = FastAPI(title="Markdown API", lifespan=lifespan)
+app = FastAPI(title="Crumpet API", description=description, lifespan=lifespan)
 
 # Database setup
 settings = get_settings()
@@ -175,7 +178,7 @@ def update_tag_description(
     _: APIKeyDep
 ):
     """
-    Update a tag's description
+    Update an existing tag's description
     """
     tag = session.get(Tag, tag_id)
     if not tag:
