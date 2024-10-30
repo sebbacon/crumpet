@@ -182,15 +182,13 @@ def search_documents(
     Search documents using FTS5
     """
     # Use raw SQL for FTS5 match query
-    result = session.exec(
-        f"""
+    sql = """
         SELECT d.*
         FROM document d
         JOIN documentfts fts ON d.id = fts.rowid
         WHERE fts MATCH :query
-        """
-        , {"query": q}
-    )
+    """
+    result = session.exec(select(Document).from_statement(sql), {"query": q})
     documents = result.all()
     
     return documents
