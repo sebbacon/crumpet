@@ -81,123 +81,131 @@ def tag_conversation(messages: List[str], title: str) -> bool:
     return result
 
 
-def extract_conversations(zip_path: Path) -> Dict:
-    """
-    Extract conversations from ChatGPT export zip file and convert to document format
-    """
-    documents = []
-    tags = {"chatgpt": "Conversation exported from ChatGPT"}
+def extract_message_parts(message):
+    """Extract the text parts from a message content."""
+    content = message.get("content")
+    if content and content.get("content_type") == "text":
+        return content.get("parts", [])
+    return []
 
+def get_author_name(message):
+    """Get the author name from a message."""
+    author = message.get("author", {}).get("role", "")
+    if author == "assistant":
+        return "ChatGPT"
+    elif author == "system":
+        return "System"
+    return author
+
+def get_conversation_messages(conversation):
+    """Extract messages from a conversation in chronological order."""
+    messages = []
+    current_node = conversation.get("current_node")
+    mapping = conversation.get("mapping", {})
+
+    while current_node:
+        node = mapping.get(current_node, {})
+        message = node.get("message") if node else None
+        if message:
+            parts = extract_message_parts(message)
+            author = get_author_name(message)
+            if parts and len(parts) > 0 and len(parts[0]) > 0:
+                if author != "system" or message.get("metadata", {}).get(
+                    "is_user_system_message"
+                ):
+                    messages.append(f"{author}: {parts[0]}")
+        current_node = node.get("parent") if node else None
+
+    return messages[::-1]  # Reverse to get chronological order
+
+def extract_messages(zip_path: Path) -> List[Dict]:
+    """
+    Extract all conversations and their messages from a ChatGPT export zip file
+    """
+    conversations_data = []
+    
     with zipfile.ZipFile(zip_path) as zf:
-        # Find all conversation JSON files
-        conv_files = [f for f in zf.namelist() if f.endswith(".json")]
-
         with zf.open("conversations.json") as f:
             conversations = json.load(f)
-
-        # Handle each conversation in the list
+            
         for conv_data in conversations:
-            # Extract title and print it
             title = conv_data.get("title", "Untitled Conversation")
-            print(f"Title: {title}")
-
-            def extract_message_parts(message):
-                """Extract the text parts from a message content."""
-                content = message.get("content")
-                if content and content.get("content_type") == "text":
-                    return content.get("parts", [])
-                return []
-
-            def get_author_name(message):
-                """Get the author name from a message."""
-                author = message.get("author", {}).get("role", "")
-                if author == "assistant":
-                    return "ChatGPT"
-                elif author == "system":
-                    return "System"
-                return author
-
-            def get_conversation_messages(conversation):
-                """Extract messages from a conversation in chronological order."""
-                messages = []
-                current_node = conversation.get("current_node")
-                mapping = conversation.get("mapping", {})
-
-                while current_node:
-                    node = mapping.get(current_node, {})
-                    message = node.get("message") if node else None
-                    if message:
-                        parts = extract_message_parts(message)
-                        author = get_author_name(message)
-                        if parts and len(parts) > 0 and len(parts[0]) > 0:
-                            if author != "system" or message.get("metadata", {}).get(
-                                "is_user_system_message"
-                            ):
-                                messages.append(f"{author}: {parts[0]}")
-                    current_node = node.get("parent") if node else None
-
-                return messages[::-1]  # Reverse to get chronological order
-
-            # Extract messages using the new function
             messages = get_conversation_messages(conv_data)
-
-            # Combine messages into content
-            content = "\n\n".join(messages)
-
-            # Only store interesting conversations
-            interestingness = score_conversation(messages, title)
-            print(f"Processing interesting conversation: {title}")
-            if interestingness:
-                tags = tag_conversation(messages, title)
-                print(title, tags)
-            else:
-                tags = "[]"
-
-            # Parse create time
             create_time = conv_data.get("create_time", 0)
             created_at = (
                 datetime.fromtimestamp(create_time)
                 if create_time
                 else datetime.utcnow()
             )
+            
+            conversations_data.append({
+                "title": title,
+                "messages": messages,
+                "created_at": created_at
+            })
+            
+    return conversations_data
 
-            # Create document and handle tags in database
-            with Session(engine) as session:
-                # Parse tags JSON and create/get Tag objects
-                try:
-                    tag_list = json.loads(tags)
-                except:
-                    print(f"*** invalid tag list {tags}")
-                    tag_list = []
-                document_tags = []
-                for tag_data in tag_list:
-                    # Check if tag exists
-                    tag = session.exec(
-                        select(Tag).where(Tag.name == tag_data["name"])
-                    ).first()
-                    if not tag:
-                        # Create new tag if it doesn't exist
-                        tag = Tag(
-                            name=tag_data["name"],
-                            description=tag_data.get("description", ""),
-                        )
-                        session.add(tag)
-                        session.commit()
-                        session.refresh(tag)
-                    document_tags.append(tag)
+def extract_conversations(zip_path: Path) -> Dict:
+    """
+    Extract conversations from ChatGPT export zip file and store in database
+    """
+    conversations_data = extract_messages(zip_path)
+    
+    for conv_data in conversations_data:
+        title = conv_data["title"]
+        messages = conv_data["messages"]
+        print(f"Title: {title}")
+        
+        # Combine messages into content
+        content = "\n\n".join(messages)
+        
+        # Only store interesting conversations
+        interestingness = score_conversation(messages, title)
+        print(f"Processing interesting conversation: {title}")
+        if interestingness:
+            tags = tag_conversation(messages, title)
+            print(title, tags)
+        else:
+            tags = "[]"
+            
+        # Create document and handle tags in database
+        with Session(engine) as session:
+            # Parse tags JSON and create/get Tag objects
+            try:
+                tag_list = json.loads(tags)
+            except:
+                print(f"*** invalid tag list {tags}")
+                tag_list = []
+            document_tags = []
+            for tag_data in tag_list:
+                # Check if tag exists
+                tag = session.exec(
+                    select(Tag).where(Tag.name == tag_data["name"])
+                ).first()
+                if not tag:
+                    # Create new tag if it doesn't exist
+                    tag = Tag(
+                        name=tag_data["name"],
+                        description=tag_data.get("description", ""),
+                    )
+                    session.add(tag)
+                    session.commit()
+                    session.refresh(tag)
+                document_tags.append(tag)
 
-                # Create document with tags
-                document = Document(
-                    tags=document_tags,
-                    title=title,
-                    description="",  # Empty description as requested
-                    content=content,
-                    created_at=created_at,
-                    updated_at=created_at,
-                )
-                session.add(document)
-                session.commit()
-
+            # Create document with tags
+            document = Document(
+                tags=document_tags,
+                title=title,
+                description="",  # Empty description as requested
+                content=content,
+                created_at=conv_data["created_at"],
+                updated_at=conv_data["created_at"],
+            )
+            session.add(document)
+            session.commit()
+    
     # Return empty dict since we're not using load_data anymore
     return {"tags": {}, "documents": []}
 
