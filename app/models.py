@@ -38,8 +38,17 @@ class Document(SQLModel, table=True):
     # Relationships
     tags: List["Tag"] = Relationship(back_populates="documents", link_model=DocumentTag)
 
-class DocumentRead(Document):
+class DocumentRead(BaseModel):
+    id: Optional[int] = None
+    title: str
+    description: Optional[str] = None
+    content: str
+    created_at: datetime
+    updated_at: datetime
     tags: List[Tag] = []
+
+    class Config:
+        from_attributes = True
 
 class DocumentCreate(BaseModel):
     title: str
