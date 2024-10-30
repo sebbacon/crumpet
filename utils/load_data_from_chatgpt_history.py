@@ -39,7 +39,7 @@ def score_conversation(messages: List[str], title: str) -> bool:
     )
     score = response.text()
     assert score in ["0", "1", "2"]
-    return score
+    return int(score)
 
 
 def tag_conversation(messages: List[str], title: str) -> bool:
@@ -48,10 +48,9 @@ def tag_conversation(messages: List[str], title: str) -> bool:
     # Fetch existing tags from database
     with Session(engine) as session:
         tags = session.exec(select(Tag)).all()
-        existing_tags = [
-            {"name": tag.name, "description": tag.description}
-            for tag in tags
-        ]
+        existing_tags = json.dumps(
+            [{"name": tag.name, "description": tag.description} for tag in tags]
+        )
     response = model.prompt(
         f"""Return an array of json tags that categories the following text.
 
@@ -139,7 +138,12 @@ def extract_conversations(zip_path: Path) -> Dict:
             # Only store interesting conversations
             interestingness = score_conversation(messages, title)
             print(f"Processing interesting conversation: {title}")
+            if interestingness > 0:
+                tags = tag_conversation(messages, title)
+            else:
+                tags = []
 
+            # XXX add tag creation here -- only create tags that don't already exist
             # Parse create time
             create_time = conv_data.get("create_time", 0)
             created_at = (
@@ -150,6 +154,7 @@ def extract_conversations(zip_path: Path) -> Dict:
 
             # Create document directly in database
             with Session(engine) as session:
+                # XXX also tag the document
                 document = Document(
                     title=title,
                     description="",  # Empty description as requested
