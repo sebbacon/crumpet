@@ -124,3 +124,63 @@ def test_create_document_invalid_tags(client: TestClient):
     
     assert response.status_code == 400
     assert response.json()["detail"] == "One or more tag IDs do not exist"
+
+def test_add_tags_to_document(client: TestClient, session: Session):
+    # Create test tags
+    tag1 = Tag(name="python", description="Python programming")
+    tag2 = Tag(name="fastapi", description="FastAPI framework")
+    tag3 = Tag(name="api", description="API development")
+    session.add_all([tag1, tag2, tag3])
+    session.commit()
+    
+    # Create test document with initial tags
+    document = Document(
+        title="Test Document",
+        description="This is a test document",
+        content="Here is the content",
+        tags=[tag1]
+    )
+    session.add(document)
+    session.commit()
+    session.refresh(document)
+
+    # Add new tags to the document
+    response = client.post(
+        f"/documents/{document.id}/tags",
+        headers={"X-API-Key": "dev_api_key"},
+        json={"tag_ids": [tag2.id, tag3.id]}
+    )
+    
+    assert response.status_code == 200
+    doc_data = response.json()
+    assert len(doc_data["tags"]) == 3
+    tag_names = {tag["name"] for tag in doc_data["tags"]}
+    assert tag_names == {"python", "fastapi", "api"}
+
+def test_add_tags_to_nonexistent_document(client: TestClient):
+    response = client.post(
+        "/documents/999/tags",
+        headers={"X-API-Key": "dev_api_key"},
+        json={"tag_ids": [1]}
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Document not found"
+
+def test_add_nonexistent_tags_to_document(client: TestClient, session: Session):
+    # Create test document
+    document = Document(
+        title="Test Document",
+        description="This is a test document",
+        content="Here is the content"
+    )
+    session.add(document)
+    session.commit()
+
+    # Try to add non-existent tags
+    response = client.post(
+        f"/documents/{document.id}/tags",
+        headers={"X-API-Key": "dev_api_key"},
+        json={"tag_ids": [999]}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "One or more tag IDs do not exist"

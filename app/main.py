@@ -99,6 +99,41 @@ def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
     return document
 
+@app.post("/documents/{document_id}/tags", response_model=DocumentRead)
+def add_tags_to_document(
+    document_id: int,
+    tags_data: DocumentAddTags,
+    session: SessionDep,
+    _: APIKeyDep
+):
+    """
+    Add tags to an existing document
+    """
+    document = session.get(Document, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Verify all tags exist
+    new_tags = session.exec(
+        select(Tag).where(Tag.id.in_(tags_data.tag_ids))
+    ).all()
+    if len(new_tags) != len(tags_data.tag_ids):
+        raise HTTPException(
+            status_code=400,
+            detail="One or more tag IDs do not exist"
+        )
+
+    # Add new tags to existing ones
+    existing_tag_ids = {tag.id for tag in document.tags}
+    for tag in new_tags:
+        if tag.id not in existing_tag_ids:
+            document.tags.append(tag)
+
+    session.add(document)
+    session.commit()
+    session.refresh(document)
+    return document
+
 @app.post("/documents/", response_model=DocumentRead, status_code=201)
 def create_document(
     document_data: DocumentCreate,

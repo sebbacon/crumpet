@@ -66,3 +66,6 @@ class DocumentCreate(BaseModel):
     description: Optional[str] = None
     content: str
     tag_ids: List[int] = Field(default_factory=list)
+
+class DocumentAddTags(BaseModel):
+    tag_ids: List[int]
