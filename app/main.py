@@ -2,8 +2,8 @@ from typing import Annotated, List
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
-from sqlmodel import Session, SQLModel, create_engine, select
-from .models import Tag, Document, TagCreate, TagUpdate, DocumentCreate, DocumentRead
+from sqlmodel import Session, SQLModel, create_engine, select, func
+from .models import Tag, Document, TagCreate, TagUpdate, DocumentCreate, DocumentRead, DocumentTag, TagWithCount
 from .config import get_settings
 
 app = FastAPI(title="Markdown API")
@@ -39,15 +39,30 @@ def on_startup():
     create_db_and_tables()
 
 # Tags endpoints
-@app.get("/tags/", response_model=List[Tag])
+@app.get("/tags/", response_model=List[TagWithCount])
 def list_tags(
     session: SessionDep,
     _: APIKeyDep
 ):
     """
-    List all available tags
+    List all available tags with document counts.
     """
-    tags = session.exec(select(Tag)).all()
+    # Subquery to count documents for each tag
+    count_subquery = (
+        select(DocumentTag.tag_id, func.count(DocumentTag.document_id).label("documents_count"))
+        .group_by(DocumentTag.tag_id)
+        .subquery()
+    )
+
+    # Join the tags with their document counts
+    tags_with_counts = (
+        select(Tag, count_subquery.c.documents_count)
+        .join(count_subquery, Tag.id == count_subquery.c.tag_id, isouter=True)
+    )
+
+    # Execute the query and map the results
+    results = session.exec(tags_with_counts).all()
+    tags = [TagWithCount(**tag.model_dump(), documents_count=count or 0) for tag, count in results]
     return tags
 
 @app.patch("/tags/{tag_id}", response_model=Tag)

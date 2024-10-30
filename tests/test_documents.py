@@ -61,10 +61,6 @@ def test_create_document(client: TestClient, session: Session):
     assert created_doc["content"] == document_data["content"]
     assert len(created_doc["tags"]) == 2
     
-    # Verify tags count
-    for tag_id in document_data["tag_ids"]:
-        tag = session.get(Tag, tag_id)
-        assert tag.documents_count == 1  # Now calculated dynamically
 
 def test_create_document_invalid_tags(client: TestClient):
     document_data = {

@@ -19,18 +19,17 @@ class Tag(SQLModel, table=True):
     # Relationships
     documents: List["Document"] = Relationship(back_populates="tags", link_model=DocumentTag)
 
-    @property
-    def documents_count(self) -> int:
-        return len(self.documents)
+    class Config:
+        arbitrary_types_allowed = True  # Allow complex types for relationships
+
+class TagWithCount(SQLModel):
+    id: int
+    name: str
+    description: Optional[str]
+    documents_count: int = 0  # Additional field for document count
 
     class Config:
-        json_schema_extra = {"example": {"id": 1, "name": "python", "description": "Python programming", "documents_count": 0}}
-        
-        @staticmethod
-        def json_schema(schema, model):
-            props = schema.get("properties", {})
-            props["documents_count"] = {"title": "Documents Count", "type": "integer"}
-            return schema
+        arbitrary_types_allowed = True
 
 class TagCreate(BaseModel):
     name: str

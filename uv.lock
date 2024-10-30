@@ -685,10 +685,14 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "aider-chat" },
+    { name = "httpx" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aider-chat", specifier = ">=0.60.1" }]
+requires-dist = [
+    { name = "aider-chat", specifier = ">=0.60.1" },
+    { name = "httpx", specifier = ">=0.27.2" },
+]
 
 [[package]]
 name = "markdown-it-py"

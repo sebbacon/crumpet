@@ -42,8 +42,9 @@ def test_list_tags_empty(client: TestClient):
 
 def test_list_tags_with_data(session: Session, client: TestClient):
     # Create test tags
-    tag1 = Tag(name="python", description="Python programming", documents_count=0)
-    tag2 = Tag(name="fastapi", description="FastAPI framework", documents_count=0)
+    tag1 = Tag(name="python", description="Python programming")
+    
+    tag2 = Tag(name="fastapi", description="FastAPI framework")
     session.add(tag1)
     session.add(tag2)
     session.commit()
@@ -54,6 +55,8 @@ def test_list_tags_with_data(session: Session, client: TestClient):
     assert len(tags) == 2
     assert tags[0]["name"] == "python"
     assert tags[1]["name"] == "fastapi"
+    assert tags[0]["documents_count"] == 0
+  
 
 def test_create_tag(client: TestClient):
     tag_data = {
@@ -69,7 +72,6 @@ def test_create_tag(client: TestClient):
     created_tag = response.json()
     assert created_tag["name"] == tag_data["name"]
     assert created_tag["description"] == tag_data["description"]
-    assert created_tag["documents_count"] == 0
     assert "id" in created_tag
 
 def test_update_tag_description(client: TestClient, session: Session):
