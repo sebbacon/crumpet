@@ -3,6 +3,14 @@ from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 from pydantic import BaseModel
 
+class DocumentTag(SQLModel, table=True):
+    document_id: Optional[int] = Field(
+        default=None, foreign_key="document.id", primary_key=True
+    )
+    tag_id: Optional[int] = Field(
+        default=None, foreign_key="tag.id", primary_key=True
+    )
+
 class Tag(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
