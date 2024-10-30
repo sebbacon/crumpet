@@ -13,12 +13,18 @@ app.dependency_overrides[get_settings] = get_test_settings
 
 @pytest.fixture(name="session")
 def session_fixture():
+    # Create a unique in-memory database URL for each test
+    database_url = f"sqlite:///:memory:"
     engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+        database_url,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
     )
     create_db_and_tables(engine)  # This will create both SQLModel tables and FTS tables
     with Session(engine) as session:
         yield session
+    # Clean up by disposing the engine
+    engine.dispose()
 
 @pytest.fixture(name="client")
 def client_fixture(session: Session):
