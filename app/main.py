@@ -22,12 +22,12 @@ app = FastAPI(title="Markdown API", lifespan=lifespan)
 settings = get_settings()
 engine = create_engine(settings.database_url)
 
-def create_db_and_tables():
+def create_db_and_tables(db_engine=engine):
     # Create regular tables
-    SQLModel.metadata.create_all(engine)
+    SQLModel.metadata.create_all(db_engine)
     
     # Create FTS5 virtual table
-    with Session(engine) as session:
+    with Session(db_engine) as session:
         session.exec(text("""
             CREATE VIRTUAL TABLE IF NOT EXISTS documentfts 
             USING fts5(
