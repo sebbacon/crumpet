@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from sqlmodel import Session, SQLModel, create_engine, select, func
 from sqlalchemy import text
 
-from .models import DocumentFTS
 from .models import Tag, Document, TagCreate, TagUpdate, DocumentCreate, DocumentRead, DocumentTag, TagWithCount, DocumentAddTags
 from .config import get_settings
 
@@ -34,9 +33,7 @@ def create_db_and_tables(db_engine=engine):
                 title, 
                 description, 
                 content,
-                tag_data,
-                content='document',
-                content_rowid='id'
+                tag_data
             )
         """))
         
@@ -202,8 +199,8 @@ def search_documents(
     sql = text("""
         SELECT d.*
         FROM document d
-        JOIN documentfts fts ON d.id = fts.rowid
-        WHERE fts MATCH :query
+        JOIN documentfts ON d.id = documentfts.rowid
+        WHERE documentfts MATCH :query
     """)
 
     # Use select with from_statement for parameter binding
