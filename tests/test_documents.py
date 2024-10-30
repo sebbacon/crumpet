@@ -16,8 +16,7 @@ def session_fixture():
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
-    SQLModel.metadata.create_all(engine)
-    create_db_and_tables(engine)  # Create FTS tables and triggers with test engine
+    create_db_and_tables(engine)  # This will create both SQLModel tables and FTS tables
     with Session(engine) as session:
         yield session
 
@@ -196,12 +195,14 @@ def test_search_documents(client: TestClient, session: Session):
     session.add_all([doc1, doc2, doc3])
     session.commit()
 
+    # Commit and wait a moment for FTS index to update
+    session.commit()
+    
     # Search by title
     response = client.get(
         "/documents/search?q=Python",
         headers={"X-API-Key": "dev_api_key"}
     )
-    breakpoint()
     assert response.status_code == 200
     results = response.json()
     assert len(results) == 1
