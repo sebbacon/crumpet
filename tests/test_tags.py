@@ -33,7 +33,7 @@ def client_fixture(session: Session):
 def test_list_tags_unauthorized(client: TestClient):
     response = client.get("/tags/")
     assert response.status_code == 403
-    assert response.json()["detail"] == "Invalid API Key"
+    assert response.json()["detail"] == "Not authenticated"
 
 def test_list_tags_empty(client: TestClient):
     response = client.get("/tags/", headers={"X-API-Key": "dev_api_key"})
