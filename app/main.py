@@ -222,9 +222,9 @@ def add_tags_to_document(
 
 @app.get("/documents/search", response_model=List[DocumentRead])
 def search_documents(
-    q: str = Query(..., min_length=3),
     session: SessionDep,
-    _: APIKeyDep
+    _: APIKeyDep,
+    q: str = Query(..., min_length=3)
 ):
     """
     Search documents using FTS5
