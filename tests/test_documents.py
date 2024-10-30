@@ -16,10 +16,10 @@ def settings_fixture():
 
 @pytest.fixture(name="session")
 def session_fixture(settings):
-    database_url = "sqlite:///:memory:"
+    database_url = "sqlite:///file::memory:?cache=shared"
     engine = create_engine(
         database_url,
-        connect_args={"check_same_thread": False},
+        connect_args={"check_same_thread": False, "uri": True},
         poolclass=StaticPool
     )
     create_db_and_tables(engine)  # This will create both SQLModel tables and FTS tables
