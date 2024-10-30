@@ -4,9 +4,13 @@ A FastAPI-based document management system with full-text search capabilities an
 
 ## Deployment
 
-Create a Dokku app:
+Create a Dokku app and configure the domain:
 
+    # Create the app
     dokku apps:create crumpet
+
+    # Set the domain
+    dokku domains:add crumpet crumpet.bacon.boutique
 
 Set up persistent storage for the SQLite database:
 
@@ -15,6 +19,20 @@ Set up persistent storage for the SQLite database:
     
     # Mount storage for SQLite database
     dokku storage:mount crumpet /var/lib/dokku/data/storage/crumpet:/app/data
+
+Set up SSL certificate:
+
+    # Install the SSL plugin if not already installed
+    sudo dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
+
+    # Configure Let's Encrypt email
+    dokku config:set --no-restart crumpet DOKKU_LETSENCRYPT_EMAIL=your-email@example.com
+
+    # Enable Let's Encrypt
+    dokku letsencrypt:enable crumpet
+
+    # Set up auto-renewal
+    dokku letsencrypt:auto-renew crumpet
 
 Set up the required environment variables:
 
@@ -26,15 +44,15 @@ Set up the required environment variables:
 
 Deploy:
 
-    git remote add dokku dokku@your-server:crumpet
+    git remote add dokku dokku@crumpet.bacon.boutique:crumpet
     git push dokku main
 
 ## API Documentation
 
 Once deployed, the API documentation is available at:
 
-    https://crumpet.your-server/docs
-    https://crumpet.your-server/redoc
+    https://crumpet.bacon.boutique/docs
+    https://crumpet.bacon.boutique/redoc
 
 The API requires an API key to be passed in the `X-API-Key` header for all requests.
 
