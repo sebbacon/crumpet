@@ -1,4 +1,5 @@
 from typing import Annotated, List
+from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -68,6 +69,46 @@ def update_tag_description(
     session.commit()
     session.refresh(tag)
     return tag
+
+@app.post("/documents/", response_model=Document, status_code=201)
+def create_document(
+    document_data: DocumentCreate,
+    session: SessionDep,
+    _: APIKeyDep
+):
+    """
+    Create a new document with optional tags
+    """
+    # First verify all tags exist
+    if document_data.tag_ids:
+        tags = session.exec(
+            select(Tag).where(Tag.id.in_(document_data.tag_ids))
+        ).all()
+        if len(tags) != len(document_data.tag_ids):
+            raise HTTPException(
+                status_code=400,
+                detail="One or more tag IDs do not exist"
+            )
+    else:
+        tags = []
+
+    # Create the document
+    document = Document(
+        title=document_data.title,
+        description=document_data.description,
+        content=document_data.content,
+        tags=tags
+    )
+    
+    # Update tags count
+    for tag in tags:
+        tag.documents_count += 1
+        session.add(tag)
+
+    session.add(document)
+    session.commit()
+    session.refresh(document)
+    return document
 
 @app.post("/tags/", response_model=Tag, status_code=201)
 def create_tag(
