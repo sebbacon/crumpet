@@ -2,33 +2,40 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 import pytest
-from app.main import app, get_session
+from unittest import mock
+from app.main import app, get_session, create_db_and_tables
 from app.models import Tag
-from app.config import get_settings, Settings
+from app.config import Settings
 
-def get_test_settings():
-    return Settings(database_url="sqlite://")
+@pytest.fixture(name="settings")
+def settings_fixture():
+    return Settings(database_url="sqlite:///:memory:", api_key="dev_api_key")
 
-app.dependency_overrides[get_settings] = get_test_settings
+@pytest.fixture(name="engine")
+def engine_fixture(settings):
+    engine = create_engine(
+        settings.database_url,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool
+    )
+    create_db_and_tables(engine)
+    return engine
 
 @pytest.fixture(name="session")
-def session_fixture():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    SQLModel.metadata.create_all(engine)
+def session_fixture(engine):
     with Session(engine) as session:
         yield session
 
 @pytest.fixture(name="client")
-def client_fixture(session: Session):
+def client_fixture(engine: Session, session: Session, settings: Settings):
     def get_session_override():
         return session
 
-    app.dependency_overrides[get_session] = get_session_override
-    client = TestClient(app)
-    yield client
-    app.dependency_overrides.clear()
+    with mock.patch('app.main.get_settings', return_value=settings), \
+         mock.patch('app.main.engine', engine), \
+         mock.patch('app.main.get_session', side_effect=get_session_override):
+        client = TestClient(app)
+        yield client
 
 def test_list_tags_unauthorized(client: TestClient):
     response = client.get("/tags/")
