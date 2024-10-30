@@ -45,7 +45,13 @@ def score_conversation(messages: List[str], title: str) -> bool:
 def tag_conversation(messages: List[str], title: str) -> bool:
 
     content = "\n".join(messages)
-    existing_tags = []  # fetch existing tags from tags table here
+    # Fetch existing tags from database
+    with Session(engine) as session:
+        tags = session.exec(select(Tag)).all()
+        existing_tags = [
+            {"name": tag.name, "description": tag.description}
+            for tag in tags
+        ]
     response = model.prompt(
         f"""Return an array of json tags that categories the following text.
 
