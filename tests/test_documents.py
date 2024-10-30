@@ -12,7 +12,9 @@ def get_test_settings():
         api_key="dev_api_key"
     )
 
+# Ensure settings override is applied
 app.dependency_overrides[get_settings] = get_test_settings
+settings = get_test_settings()
 
 @pytest.fixture(name="session")
 def session_fixture():
