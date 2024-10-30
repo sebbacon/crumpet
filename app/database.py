@@ -7,6 +7,10 @@ DATABASE_URL = os.getenv("DATABASE_URL", "documents.db")
 
 def get_db():
     """Get a database connection"""
+    # Ensure the database directory exists
+    db_dir = os.path.dirname(DATABASE_URL)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir)
     conn = sqlite3.connect(DATABASE_URL)
     conn.row_factory = sqlite3.Row
     return conn
