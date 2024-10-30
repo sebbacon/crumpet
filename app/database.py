@@ -2,8 +2,12 @@ import sqlite3
 import os
 import glob
 from contextlib import contextmanager
+from dotenv import load_dotenv
 
-DATABASE_URL = os.getenv("DATABASE_URL", "documents.db")
+# Load environment variables from .env file
+load_dotenv()
+
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 def get_db():
     """Get a database connection"""
