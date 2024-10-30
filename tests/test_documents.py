@@ -63,6 +63,8 @@ def test_create_document(client: TestClient, session: Session):
         "description": "This is a test document",
         "content": "Here is the full content of the test document",
         "tag_ids": [tag1.id, tag2.id],
+        "created_at": "2024-01-01T00:00:00",
+        "updated_at": "2024-01-01T00:00:00"
     }
 
     response = client.post(
@@ -75,6 +77,8 @@ def test_create_document(client: TestClient, session: Session):
     assert created_doc["description"] == document_data["description"]
     assert created_doc["content"] == document_data["content"]
     assert len(created_doc["tags"]) == 2
+    assert created_doc["created_at"] == document_data["created_at"]
+    assert created_doc["updated_at"] == document_data["updated_at"]
 
 
 def test_get_document(client: TestClient, session: Session):
@@ -127,6 +131,8 @@ def test_create_document_invalid_tags(client: TestClient):
         "description": "This is a test document",
         "content": "Here is the full content of the test document",
         "tag_ids": [999],  # Non-existent tag ID
+        "created_at": None,  # Test default handling
+        "updated_at": None,
     }
 
     response = client.post(

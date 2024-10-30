@@ -317,6 +317,8 @@ def create_document(document_data: DocumentCreate, session: SessionDep, _: APIKe
         description=document_data.description,
         content=document_data.content,
         tags=tags,
+        created_at=document_data.created_at or datetime.utcnow(),
+        updated_at=document_data.updated_at or datetime.utcnow(),
     )
 
     session.add(document)
