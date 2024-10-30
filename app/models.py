@@ -25,6 +25,12 @@ class Tag(SQLModel, table=True):
 
     class Config:
         json_schema_extra = {"example": {"id": 1, "name": "python", "description": "Python programming", "documents_count": 0}}
+        
+        @staticmethod
+        def json_schema(schema, model):
+            props = schema.get("properties", {})
+            props["documents_count"] = {"title": "Documents Count", "type": "integer"}
+            return schema
 
 class TagCreate(BaseModel):
     name: str
