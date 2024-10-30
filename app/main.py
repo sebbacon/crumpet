@@ -85,7 +85,8 @@ def create_db_and_tables(db_engine=engine):
                             WHERE dt.document_id = new.id
                         ),
                         ''
-                    )
+                    ),
+                    CAST(new.interestingness AS TEXT)
                 );
             END;
         """
@@ -121,7 +122,8 @@ def create_db_and_tables(db_engine=engine):
                             WHERE dt.document_id = new.id
                         ),
                         ''
-                    )
+                    ),
+                    CAST(new.interestingness AS TEXT)
                 );
             END;
         """
