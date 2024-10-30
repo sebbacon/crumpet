@@ -54,6 +54,19 @@ def migrate():
     conn.commit()
     conn.close()
 
+def create_document(title: str, description: str, content: str, tags: str | None = None):
+    """Create a new document"""
+    with get_db_cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO documents (title, description, content, tags)
+            VALUES (?, ?, ?, ?)
+            RETURNING *
+            """,
+            (title, description, content, tags)
+        )
+        return dict(cursor.fetchone())
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) > 1 and sys.argv[1] == "migrate":
