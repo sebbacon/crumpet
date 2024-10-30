@@ -12,6 +12,9 @@ class TagCreate(BaseModel):
     name: str
     description: Optional[str] = None
 
+class TagUpdate(BaseModel):
+    description: str
+
 class Document(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str = Field(index=True)

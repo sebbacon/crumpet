@@ -72,6 +72,35 @@ def test_create_tag(client: TestClient):
     assert created_tag["documents_count"] == 0
     assert "id" in created_tag
 
+def test_update_tag_description(client: TestClient, session: Session):
+    # Create test tag
+    tag = Tag(name="python", description="Old description")
+    session.add(tag)
+    session.commit()
+    session.refresh(tag)
+
+    # Update the tag
+    update_data = {"description": "New description"}
+    response = client.patch(
+        f"/tags/{tag.id}",
+        headers={"X-API-Key": "dev_api_key"},
+        json=update_data
+    )
+    assert response.status_code == 200
+    updated_tag = response.json()
+    assert updated_tag["description"] == "New description"
+    assert updated_tag["name"] == "python"  # Name should remain unchanged
+
+def test_update_tag_not_found(client: TestClient):
+    update_data = {"description": "New description"}
+    response = client.patch(
+        "/tags/999",
+        headers={"X-API-Key": "dev_api_key"},
+        json=update_data
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Tag not found"
+
 def test_create_tag_unauthorized(client: TestClient):
     tag_data = {
         "name": "docker",

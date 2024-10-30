@@ -49,6 +49,26 @@ def list_tags(
     tags = session.exec(select(Tag)).all()
     return tags
 
+@app.patch("/tags/{tag_id}", response_model=Tag)
+def update_tag_description(
+    tag_id: int,
+    tag_data: TagUpdate,
+    session: SessionDep,
+    _: APIKeyDep
+):
+    """
+    Update a tag's description
+    """
+    tag = session.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    
+    tag.description = tag_data.description
+    session.add(tag)
+    session.commit()
+    session.refresh(tag)
+    return tag
+
 @app.post("/tags/", response_model=Tag, status_code=201)
 def create_tag(
     tag_data: TagCreate,
