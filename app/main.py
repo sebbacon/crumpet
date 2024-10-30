@@ -1,8 +1,9 @@
 from typing import Annotated, List
 from datetime import datetime
-from fastapi import FastAPI, Depends, HTTPException, Security
+from fastapi import FastAPI, Depends, HTTPException, Security, Query
 from fastapi.security.api_key import APIKeyHeader
 from sqlmodel import Session, SQLModel, create_engine, select, func
+from .models import DocumentFTS
 from .models import Tag, Document, TagCreate, TagUpdate, DocumentCreate, DocumentRead, DocumentTag, TagWithCount, DocumentAddTags
 from .config import get_settings
 
