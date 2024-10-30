@@ -166,6 +166,65 @@ def test_add_tags_to_nonexistent_document(client: TestClient):
     assert response.status_code == 404
     assert response.json()["detail"] == "Document not found"
 
+def test_search_documents(client: TestClient, session: Session):
+    # Create test tags
+    tag1 = Tag(name="python", description="Python programming")
+    tag2 = Tag(name="fastapi", description="FastAPI framework")
+    session.add_all([tag1, tag2])
+    session.commit()
+
+    # Create test documents with tags
+    doc1 = Document(
+        title="Python Tutorial",
+        description="Learn Python programming",
+        content="This is a Python tutorial",
+        tags=[tag1]
+    )
+    doc2 = Document(
+        title="FastAPI Guide",
+        description="Build APIs with FastAPI",
+        content="FastAPI tutorial content",
+        tags=[tag2]
+    )
+    doc3 = Document(
+        title="Database Guide",
+        description="Working with databases",
+        content="Database tutorial content",
+        tags=[]
+    )
+    session.add_all([doc1, doc2, doc3])
+    session.commit()
+
+    # Search by title
+    response = client.get(
+        "/documents/search?q=Python",
+        headers={"X-API-Key": "dev_api_key"}
+    )
+    assert response.status_code == 200
+    results = response.json()
+    assert len(results) == 1
+    assert results[0]["title"] == "Python Tutorial"
+
+    # Search by tag
+    response = client.get(
+        "/documents/search?q=fastapi",
+        headers={"X-API-Key": "dev_api_key"}
+    )
+    assert response.status_code == 200
+    results = response.json()
+    assert len(results) == 1
+    assert results[0]["title"] == "FastAPI Guide"
+
+    # Search by content
+    response = client.get(
+        "/documents/search?q=database",
+        headers={"X-API-Key": "dev_api_key"}
+    )
+    assert response.status_code == 200
+    results = response.json()
+    assert len(results) == 1
+    assert results[0]["title"] == "Database Guide"
+
 def test_add_nonexistent_tags_to_document(client: TestClient, session: Session):
     # Create test document
     document = Document(

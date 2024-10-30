@@ -42,12 +42,20 @@ class Document(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str = Field(index=True)
     description: Optional[str] = None
-    content: str = Field(default="")  # This will be indexed with FTS5 later
+    content: str = Field(default="")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     # Relationships
     tags: List["Tag"] = Relationship(back_populates="documents", link_model=DocumentTag)
+
+class DocumentFTS(SQLModel, table=True):
+    __tablename__ = "documentfts"
+    rowid: Optional[int] = Field(default=None, primary_key=True)
+    title: str
+    description: str
+    content: str
+    tag_data: str  # Combined tag names and descriptions
 
 class DocumentRead(BaseModel):
     id: Optional[int] = None

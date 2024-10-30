@@ -13,7 +13,93 @@ settings = get_settings()
 engine = create_engine(settings.database_url)
 
 def create_db_and_tables():
+    # Create regular tables
     SQLModel.metadata.create_all(engine)
+    
+    # Create FTS5 virtual table
+    with Session(engine) as session:
+        session.exec("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS documentfts 
+            USING fts5(
+                title, 
+                description, 
+                content,
+                tag_data,
+                content='document',
+                content_rowid='id'
+            )
+        """)
+        
+        # Create triggers to keep FTS index updated
+        session.exec("""
+            CREATE TRIGGER IF NOT EXISTS document_ai AFTER INSERT ON document BEGIN
+                INSERT INTO documentfts(rowid, title, description, content, tag_data)
+                VALUES (
+                    new.id, 
+                    new.title, 
+                    COALESCE(new.description, ''),
+                    new.content,
+                    (
+                        SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
+                        FROM tag t
+                        JOIN documenttag dt ON dt.tag_id = t.id
+                        WHERE dt.document_id = new.id
+                    )
+                );
+            END;
+        """)
+        
+        session.exec("""
+            CREATE TRIGGER IF NOT EXISTS document_ad AFTER DELETE ON document BEGIN
+                DELETE FROM documentfts WHERE rowid = old.id;
+            END;
+        """)
+        
+        session.exec("""
+            CREATE TRIGGER IF NOT EXISTS document_au AFTER UPDATE ON document BEGIN
+                DELETE FROM documentfts WHERE rowid = old.id;
+                INSERT INTO documentfts(rowid, title, description, content, tag_data)
+                VALUES (
+                    new.id, 
+                    new.title, 
+                    COALESCE(new.description, ''),
+                    new.content,
+                    (
+                        SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
+                        FROM tag t
+                        JOIN documenttag dt ON dt.tag_id = t.id
+                        WHERE dt.document_id = new.id
+                    )
+                );
+            END;
+        """)
+        
+        session.exec("""
+            CREATE TRIGGER IF NOT EXISTS documenttag_ai AFTER INSERT ON documenttag BEGIN
+                UPDATE documentfts 
+                SET tag_data = (
+                    SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
+                    FROM tag t
+                    JOIN documenttag dt ON dt.tag_id = t.id
+                    WHERE dt.document_id = new.document_id
+                )
+                WHERE rowid = new.document_id;
+            END;
+        """)
+        
+        session.exec("""
+            CREATE TRIGGER IF NOT EXISTS documenttag_ad AFTER DELETE ON documenttag BEGIN
+                UPDATE documentfts 
+                SET tag_data = (
+                    SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
+                    FROM tag t
+                    JOIN documenttag dt ON dt.tag_id = t.id
+                    WHERE dt.document_id = old.document_id
+                )
+                WHERE rowid = old.document_id;
+            END;
+        """)
+        session.commit()
 
 def get_session():
     with Session(engine) as session:
@@ -133,6 +219,24 @@ def add_tags_to_document(
     session.commit()
     session.refresh(document)
     return document
+
+@app.get("/documents/search", response_model=List[DocumentRead])
+def search_documents(
+    q: str = Query(..., min_length=3),
+    session: SessionDep,
+    _: APIKeyDep
+):
+    """
+    Search documents using FTS5
+    """
+    documents = session.exec(
+        select(Document)
+        .where(Document.id.in_(
+            select(DocumentFTS.rowid)
+            .where(DocumentFTS.match(q))
+        ))
+    ).all()
+    return documents
 
 @app.post("/documents/", response_model=DocumentRead, status_code=201)
 def create_document(
