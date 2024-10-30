@@ -49,11 +49,14 @@ def create_db_and_tables(db_engine=engine):
                     new.title, 
                     COALESCE(new.description, ''),
                     new.content,
-                    (
-                        SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
-                        FROM tag t
-                        JOIN documenttag dt ON dt.tag_id = t.id
-                        WHERE dt.document_id = new.id
+                    COALESCE(
+                        (
+                            SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
+                            FROM tag t
+                            JOIN documenttag dt ON dt.tag_id = t.id
+                            WHERE dt.document_id = new.id
+                        ),
+                        ''
                     )
                 );
             END;
@@ -74,11 +77,14 @@ def create_db_and_tables(db_engine=engine):
                     new.title, 
                     COALESCE(new.description, ''),
                     new.content,
-                    (
-                        SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
-                        FROM tag t
-                        JOIN documenttag dt ON dt.tag_id = t.id
-                        WHERE dt.document_id = new.id
+                    COALESCE(
+                        (
+                            SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
+                            FROM tag t
+                            JOIN documenttag dt ON dt.tag_id = t.id
+                            WHERE dt.document_id = new.id
+                        ),
+                        ''
                     )
                 );
             END;
@@ -87,11 +93,14 @@ def create_db_and_tables(db_engine=engine):
         session.exec(text("""
             CREATE TRIGGER IF NOT EXISTS documenttag_ai AFTER INSERT ON documenttag BEGIN
                 UPDATE documentfts 
-                SET tag_data = (
-                    SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
-                    FROM tag t
-                    JOIN documenttag dt ON dt.tag_id = t.id
-                    WHERE dt.document_id = new.document_id
+                SET tag_data = COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
+                        FROM tag t
+                        JOIN documenttag dt ON dt.tag_id = t.id
+                        WHERE dt.document_id = new.document_id
+                    ),
+                    ''
                 )
                 WHERE rowid = new.document_id;
             END;
@@ -100,11 +109,14 @@ def create_db_and_tables(db_engine=engine):
         session.exec(text("""
             CREATE TRIGGER IF NOT EXISTS documenttag_ad AFTER DELETE ON documenttag BEGIN
                 UPDATE documentfts 
-                SET tag_data = (
-                    SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
-                    FROM tag t
-                    JOIN documenttag dt ON dt.tag_id = t.id
-                    WHERE dt.document_id = old.document_id
+                SET tag_data = COALESCE(
+                    (
+                        SELECT GROUP_CONCAT(t.name || ' ' || COALESCE(t.description, ''), ' ')
+                        FROM tag t
+                        JOIN documenttag dt ON dt.tag_id = t.id
+                        WHERE dt.document_id = old.document_id
+                    ),
+                    ''
                 )
                 WHERE rowid = old.document_id;
             END;
