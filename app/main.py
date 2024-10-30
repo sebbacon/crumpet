@@ -241,10 +241,10 @@ def update_tag_description(
 
 @app.get("/documents/search", response_model=List[DocumentRead])
 def search_documents(
-    session: SessionDep, 
-    _: APIKeyDep, 
+    session: SessionDep,
+    _: APIKeyDep,
     q: str = Query(..., min_length=3),
-    min_interestingness: int = Query(None, ge=0, le=2)
+    min_interestingness: int = Query(None, ge=0, le=2),
 ):
     """
     Search documents using FTS5
@@ -252,7 +252,7 @@ def search_documents(
     # Build the FTS query
     query = "SELECT rowid FROM documentfts WHERE documentfts MATCH :query"
     params = {"query": q}
-    
+
     if min_interestingness is not None:
         query += " AND CAST(interestingness AS INTEGER) >= :min_interestingness"
         params["min_interestingness"] = min_interestingness
