@@ -72,41 +72,40 @@ def extract_conversations(zip_path: Path) -> Dict:
             title = conv_data.get("title", "Untitled Conversation")
             print(f"Title: {title}")
 
-            # Prepare a flattened message list
-            messages = []
-            mapping = conv_data.get("mapping", {})
-            visited = set()
+            def extract_message_parts(message):
+                """Extract the text parts from a message content."""
+                content = message.get("content")
+                if content and content.get("content_type") == "text":
+                    return content.get("parts", [])
+                return []
 
-            def add_message_to_thread(message_id):
-                if message_id in visited or message_id not in mapping:
-                    return
-                visited.add(message_id)
+            def get_author_name(message):
+                """Get the author name from a message."""
+                author = message.get("author", {}).get("role", "")
+                if author == "assistant":
+                    return "ChatGPT"
+                elif author == "system":
+                    return "System"
+                return author
 
-                message_data = mapping[message_id].get("message")
-                if message_data:
-
-                    # Extract role and content
-                    role = message_data.get("author", {}).get("role", "unknown")
-                    content = message_data.get("content", {}).get("parts", [""])[0]
-                    if content:
-                        breakpoint()
-                    else:
-                        breakpoint()
-                        text = message_data.get("content", {}).get("text", {})
-                        content = text.get("content")
-                        title = text.get("title")
-                        description = text.get("description")
-                        print("  extra title", title, description)
-                    messages.append(f"{role}: {content}")
-
-                # Recursively add child messages in a depth-first order
-                for child_id in mapping[message_id].get("children", []):
-                    add_message_to_thread(child_id)
-
-            # Start flattening from root nodes
-            for msg_id, msg_content in mapping.items():
-                if msg_content.get("parent") is None:  # Identify root messages
-                    add_message_to_thread(msg_id)
+            def get_conversation_messages(conversation):
+                """Extract messages from a conversation in chronological order."""
+                messages = []
+                current_node = conversation.get("current_node")
+                mapping = conversation.get("mapping", {})
+                
+                while current_node:
+                    node = mapping.get(current_node, {})
+                    message = node.get("message") if node else None
+                    if message:
+                        parts = extract_message_parts(message)
+                        author = get_author_name(message)
+                        if parts and len(parts) > 0 and len(parts[0]) > 0:
+                            if author != "system" or message.get("metadata", {}).get("is_user_system_message"):
+                                messages.append(f"{author}: {parts[0]}")
+                    current_node = node.get("parent") if node else None
+                
+                return messages[::-1]  # Reverse to get chronological order
 
             # Extract messages using the new function
             messages = get_conversation_messages(conv_data)
