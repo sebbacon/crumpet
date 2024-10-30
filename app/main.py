@@ -39,6 +39,17 @@ def on_startup():
 
 # Tags endpoints
 @app.get("/tags/", response_model=List[Tag])
+def list_tags(
+    session: SessionDep,
+    _: APIKeyDep
+):
+    """
+    List all available tags
+    """
+    tags = session.exec(select(Tag)).all()
+    return tags
+
+@app.post("/tags/", response_model=Tag, status_code=201)
 def create_tag(
     tag_data: TagCreate,
     session: SessionDep,
@@ -52,14 +63,3 @@ def create_tag(
     session.commit()
     session.refresh(tag)
     return tag
-
-@app.post("/tags/", response_model=Tag, status_code=201)
-def list_tags(
-    session: SessionDep,
-    _: APIKeyDep
-):
-    """
-    List all available tags
-    """
-    tags = session.exec(select(Tag)).all()
-    return tags
