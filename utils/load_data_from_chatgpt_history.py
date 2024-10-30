@@ -108,21 +108,19 @@ def extract_conversations(zip_path: Path) -> Dict:
                 if msg_content.get("parent") is None:  # Identify root messages
                     add_message_to_thread(msg_id)
 
-            # Combine all messages into a single content string
+            # Extract messages using the new function
+            messages = get_conversation_messages(conv_data)
+            
+            # Combine messages into content
             content = "\n\n".join(messages)
 
             # Only store interesting conversations
-            print(title)
             if is_interesting_conversation(messages, title):
-                print("interesting")
+                print(f"Processing interesting conversation: {title}")
+                
                 # Parse create time
-                create_time_str = conv_data.get("create_time", "")
-                try:
-                    created_at = datetime.fromisoformat(
-                        create_time_str.replace("Z", "+00:00")
-                    )
-                except (ValueError, AttributeError):
-                    created_at = datetime.utcnow()
+                create_time = conv_data.get("create_time", 0)
+                created_at = datetime.fromtimestamp(create_time) if create_time else datetime.utcnow()
 
                 # Create document directly in database
                 with Session(engine) as session:
