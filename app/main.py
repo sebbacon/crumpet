@@ -70,7 +70,7 @@ def update_tag_description(
     session.refresh(tag)
     return tag
 
-@app.post("/documents/", response_model=Document, status_code=201)
+@app.post("/documents/", response_model=DocumentRead, status_code=201)
 def create_document(
     document_data: DocumentCreate,
     session: SessionDep,

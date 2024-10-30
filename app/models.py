@@ -38,6 +38,9 @@ class Document(SQLModel, table=True):
     # Relationships
     tags: List["Tag"] = Relationship(back_populates="documents", link_model=DocumentTag)
 
+class DocumentRead(Document):
+    tags: List[Tag] = []
+
 class DocumentCreate(BaseModel):
     title: str
     description: Optional[str] = None
