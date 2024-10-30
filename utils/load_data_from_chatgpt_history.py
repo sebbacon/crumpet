@@ -9,9 +9,12 @@ from app.models import Document, Tag
 from utils.load_data import load_data
 from sqlmodel import Session, select
 from app.main import engine
+import llm
+
+model = llm.get_model("gpt-4o-mini")
 
 
-def is_interesting_conversation(messages: List[str], title: str) -> bool:
+def score_conversation(messages: List[str], title: str) -> bool:
     """
     Determine if a conversation is interesting enough to store.
     Criteria:
@@ -20,31 +23,48 @@ def is_interesting_conversation(messages: List[str], title: str) -> bool:
     - Non-trivial conversation length
     """
 
-    if len(messages) < 3:
-        return False
+    content = "\n".join(messages)
+    response = model.prompt(
+        f"""Score the following text for interestingness on a scale of 0-2, as follows. Just return a number (0, 1 or 2); nothing else
 
-    total_length = sum(len(msg) for msg in messages)
-    if total_length < 4:  # Skip very short conversations
-        return False
+0: Short text defining words, short technical solutions, or playful silly things, or longer text which is mostly programming or code               
+2: Extensive text exploring historical, philosophical, or otherwise stimulating or emotional topics in-depth, or shorter text about unusual or intellectual or psychological topics, or things that are like diary entries. Not programming-based things unless they are mostly conceptual.                            
+1: Things not fitting into 0 or 2
 
-    # Look for technical indicators
-    technical_patterns = [
-        r"```[a-z]*\n",  # Code blocks
-        r"import\s+[a-zA-Z_]",  # Import statements
-        r"def\s+[a-zA-Z_]",  # Function definitions
-        r"class\s+[a-zA-Z_]",  # Class definitions
-        r"git\s+[a-z]+",  # Git commands
-        r"docker\s+[a-z]+",  # Docker commands
-        r"npm\s+[a-z]+",  # NPM commands
-        r"pip\s+[a-z]+",  # Pip commands
-    ]
+
+# Text to score
+
+{content}
+"""
+    )
+    score = response.text()
+    assert score in ["0", "1", "2"]
+    return score
+
+
+def tag_conversation(messages: List[str], title: str) -> bool:
 
     content = "\n".join(messages)
-    for pattern in technical_patterns:
-        if re.search(pattern, content):
-            return False
+    existing_tags = []  # fetch existing tags from tags table here
+    response = model.prompt(
+        f"""Return an array of json tags that categories the following text.
 
-    return True
+        Consider existing tags first, and prefer these if they are appropriate.
+
+        If none of them fit, or some fit but some new ones would be suitable, then invent new tags as necessary.
+
+        Example: [{"name": "programming", "description": "Computer Programming"}]
+
+        Existing tags: {existing_tags}
+
+
+# Text to tag
+
+{content}
+"""
+    )
+    result = response.text()
+    return result
 
 
 def extract_conversations(zip_path: Path) -> Dict:
@@ -111,28 +131,28 @@ def extract_conversations(zip_path: Path) -> Dict:
             content = "\n\n".join(messages)
 
             # Only store interesting conversations
-            if is_interesting_conversation(messages, title):
-                print(f"Processing interesting conversation: {title}")
+            interestingness = score_conversation(messages, title)
+            print(f"Processing interesting conversation: {title}")
 
-                # Parse create time
-                create_time = conv_data.get("create_time", 0)
-                created_at = (
-                    datetime.fromtimestamp(create_time)
-                    if create_time
-                    else datetime.utcnow()
+            # Parse create time
+            create_time = conv_data.get("create_time", 0)
+            created_at = (
+                datetime.fromtimestamp(create_time)
+                if create_time
+                else datetime.utcnow()
+            )
+
+            # Create document directly in database
+            with Session(engine) as session:
+                document = Document(
+                    title=title,
+                    description="",  # Empty description as requested
+                    content=content,
+                    created_at=created_at,
+                    updated_at=created_at,
                 )
-
-                # Create document directly in database
-                with Session(engine) as session:
-                    document = Document(
-                        title=title,
-                        description="",  # Empty description as requested
-                        content=content,
-                        created_at=created_at,
-                        updated_at=created_at,
-                    )
-                    session.add(document)
-                    session.commit()
+                session.add(document)
+                session.commit()
 
     # Return empty dict since we're not using load_data anymore
     return {"tags": {}, "documents": []}
