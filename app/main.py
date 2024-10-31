@@ -250,18 +250,22 @@ def search_documents(
     Search documents using FTS5
     """
     # Build the FTS query
-    query = "SELECT rowid FROM documentfts WHERE documentfts MATCH :query"
+    # Build query that joins Document with FTS results to preserve ranking
+    query = """
+        SELECT document.*
+        FROM documentfts
+        JOIN document ON document.id = documentfts.rowid 
+        WHERE documentfts MATCH :query
+    """
     params = {"query": q}
 
     if min_interestingness is not None:
-        query += " AND CAST(interestingness AS INTEGER) >= :min_interestingness"
+        query += " AND CAST(documentfts.interestingness AS INTEGER) >= :min_interestingness"
         params["min_interestingness"] = min_interestingness
 
-    matching_docs = session.exec(text(query).params(**params)).all()
-
-    # Then fetch complete Document objects for those IDs
+    # Execute joined query that maintains FTS ranking order
     result = session.exec(
-        select(Document).where(Document.id.in_([doc[0] for doc in matching_docs]))
+        select(Document).from_statement(text(query).params(**params))
     )
     documents = [DocumentRead.model_validate(doc) for doc in result]
 
