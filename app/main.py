@@ -239,7 +239,7 @@ def update_tag_description(
     return tag
 
 
-@app.get("/documents/search", response_model=List[DocumentRead])
+@app.get("/documents/search", response_model=List[DocumentSearchResult])
 def search_documents(
     session: SessionDep,
     _: APIKeyDep,

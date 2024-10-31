@@ -71,6 +71,19 @@ class DocumentRead(BaseModel):
         from_attributes = True
 
 
+class DocumentSearchResult(BaseModel):
+    id: Optional[int] = None
+    title: str
+    description: Optional[str] = None
+    interestingness: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+    tags: List[Tag] = []
+
+    class Config:
+        from_attributes = True
+
+
 class DocumentCreate(BaseModel):
     title: str
     description: Optional[str] = None
