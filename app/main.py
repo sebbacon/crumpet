@@ -240,12 +240,14 @@ def update_tag_description(
     return tag
 
 
-@app.get("/documents/search", response_model=List[DocumentSearchResult])
+@app.get("/documents/search", response_model=SearchResponse)
 def search_documents(
     session: SessionDep,
     _: APIKeyDep,
     q: str = Query(..., min_length=3),
     min_interestingness: int = Query(None, ge=0, le=2),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
 ):
     """
     Search documents using FTS5
@@ -271,16 +273,34 @@ def search_documents(
         query += " AND CAST(documentfts.interestingness AS INTEGER) >= :min_interestingness"
         params["min_interestingness"] = min_interestingness
 
+    # Get total count first
+    count_query = f"""
+        SELECT COUNT(*) 
+        FROM documentfts
+        JOIN document ON document.id = documentfts.rowid 
+        WHERE documentfts MATCH :query
+    """
+    if min_interestingness is not None:
+        count_query += " AND CAST(documentfts.interestingness AS INTEGER) >= :min_interestingness"
+    
+    total = session.execute(text(count_query).params(**params)).scalar()
+
+    # Add pagination to main query
+    query += " LIMIT :limit OFFSET :offset"
+    params["limit"] = page_size
+    params["offset"] = (page - 1) * page_size
+
     # Execute joined query that maintains FTS ranking order
     result = session.exec(
         select(Document).where(Document.id.in_(
             session.execute(text(query).params(**params)).scalars()
         ))
     ).all()
+    
     # Convert Document objects to DocumentRead models
     documents = [DocumentRead.model_validate(doc) for doc in result]
 
-    return documents
+    return SearchResponse(total=total, results=documents)
 
 
 @app.get("/documents/{document_id}", response_model=DocumentRead)

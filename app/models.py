@@ -83,6 +83,10 @@ class DocumentSearchResult(BaseModel):
     class Config:
         from_attributes = True
 
+class SearchResponse(BaseModel):
+    total: int
+    results: List[DocumentSearchResult]
+
 
 class DocumentCreate(BaseModel):
     title: str
