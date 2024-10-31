@@ -70,3 +70,8 @@ Then run:
 ## Loading data
 
     python -m utils.load_data utils/example_data.json
+
+Or to load GPT
+
+    dokku config:set crumpet OPENAI_API_KEY=sk-svcacct-xxx
+    python -m utils.load_data_from_chatgpt_history ~/Downloads/202af500a1852848b7bf78c8f3c6e006679a535bb939a83eabfc0d46d86f8e5f-2024-10-30-16-56-33.zip
