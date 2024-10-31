@@ -266,7 +266,7 @@ def search_documents(
     # Execute joined query that maintains FTS ranking order
     result = session.exec(
         select(Document).from_statement(text(query).params(**params))
-    )
+    ).all()
     documents = [DocumentRead.model_validate(doc) for doc in result]
 
     return documents
