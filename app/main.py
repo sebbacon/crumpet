@@ -268,7 +268,7 @@ def search_documents(
         select(Document).from_statement(text(query).params(**params))
     ).all()
     # Convert Document objects to DocumentRead models
-    documents = [DocumentRead.model_validate(Document.model_validate(doc)) for doc in result]
+    documents = [DocumentRead.model_validate(doc) for doc in result]
 
     return documents
 
