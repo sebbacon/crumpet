@@ -264,10 +264,12 @@ def search_documents(
         params["min_interestingness"] = min_interestingness
 
     # Execute joined query that maintains FTS ranking order
+    # Execute query and convert results to Document objects
     result = session.exec(
         select(Document).from_statement(text(query).params(**params))
     ).all()
-    documents = [DocumentRead.model_validate(doc) for doc in result]
+    # Convert Document objects to DocumentRead models
+    documents = [DocumentRead.model_validate(doc.model_dump()) for doc in result]
 
     return documents
 
