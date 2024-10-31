@@ -18,6 +18,7 @@ from .models import (
     TagWithCount,
     DocumentAddTags,
     DocumentSearchResult,
+    SearchResponse,
 )
 from .config import get_settings
 
