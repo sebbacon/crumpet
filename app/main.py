@@ -252,7 +252,14 @@ def search_documents(
     # Build the FTS query
     # Build query that joins Document with FTS results to preserve ranking
     query = """
-        SELECT document.*
+        SELECT 
+            document.id,
+            document.title,
+            document.description,
+            document.content,
+            document.interestingness,
+            document.created_at,
+            document.updated_at
         FROM documentfts
         JOIN document ON document.id = documentfts.rowid 
         WHERE documentfts MATCH :query
@@ -265,7 +272,9 @@ def search_documents(
 
     # Execute joined query that maintains FTS ranking order
     result = session.exec(
-        select(Document).from_statement(text(query).params(**params))
+        select(Document).where(Document.id.in_(
+            session.execute(text(query).params(**params)).scalars()
+        ))
     ).all()
     # Convert Document objects to DocumentRead models
     documents = [DocumentRead.model_validate(doc) for doc in result]
