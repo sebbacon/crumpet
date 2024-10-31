@@ -227,6 +227,7 @@ def test_search_documents(client: TestClient, session: Session):
     results = response.json()
     assert len(results) == 1
     assert results[0]["title"] == "Python Tutorial"
+    assert "content" not in results[0]
 
     # Search by tag
     response = client.get(
@@ -236,6 +237,7 @@ def test_search_documents(client: TestClient, session: Session):
     results = response.json()
     assert len(results) == 1
     assert results[0]["title"] == "FastAPI Guide"
+    assert "content" not in results[0]
 
     # Search by content
     response = client.get(
@@ -245,6 +247,7 @@ def test_search_documents(client: TestClient, session: Session):
     results = response.json()
     assert len(results) == 1
     assert results[0]["title"] == "Database Guide"
+    assert "content" not in results[0]
 
 
 def test_add_nonexistent_tags_to_document(client: TestClient, session: Session):
