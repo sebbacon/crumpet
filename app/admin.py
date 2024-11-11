@@ -47,7 +47,7 @@ class DocumentAdmin(ModelView, model=Document):
             1: "⭐⭐ Medium",
             2: "⭐⭐⭐ High"
         }.get(m.interestingness, "Unknown"),
-        "tags": lambda m, a: ", ".join([f"🏷️ {tag.name}" for tag in m.tags]) or "No tags"
+        "tags": lambda m, a: ", ".join([f"🏷️ {tag.name}" for tag in m.tags if tag]) or "No tags"
     }
 
     # Custom labels
