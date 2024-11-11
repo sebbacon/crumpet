@@ -2,7 +2,7 @@ from typing import Annotated, List
 from pathlib import Path
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Security, Query
-from fastapi.middleware.sessions import SessionMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 from fastapi.security.api_key import APIKeyHeader
 from contextlib import asynccontextmanager
 from sqlmodel import Session, SQLModel, create_engine, select, func
