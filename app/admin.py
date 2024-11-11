@@ -1,3 +1,4 @@
+from markupsafe import Markup
 from sqladmin import Admin, ModelView, BaseView, expose
 from sqladmin.authentication import AuthenticationBackend
 from starlette.requests import Request
@@ -59,13 +60,13 @@ class DocumentAdmin(ModelView, model=Document):
             1: "⭐⭐ Medium",
             2: "⭐⭐⭐ High",
         }.get(m.interestingness, "Unknown"),
-        "tags": lambda m, a: ", ".join(
+        "tags": lambda m, a: Markup(", ".join(
             [
                 f'<a href="/admin/tag/details/{tag.id}">🏷️ {tag.name}</a>'
                 for tag in m.tags
                 if tag
             ]
-        )
+        ))
         or "No tags",
     }
 
