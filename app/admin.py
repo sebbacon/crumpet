@@ -40,6 +40,20 @@ class DocumentAdmin(ModelView, model=Document):
     can_delete = True
     page_size = 20
 
+    # Custom formatting for interestingness
+    column_formatters = {
+        Document.interestingness: lambda m, a: {
+            0: "⭐ Low",
+            1: "⭐⭐ Medium",
+            2: "⭐⭐⭐ High"
+        }.get(m.interestingness, "Unknown")
+    }
+
+    # Custom labels
+    column_labels = {
+        Document.interestingness: "Interest Level"
+    }
+
 class TagAdmin(ModelView, model=Tag):
     column_list = [Tag.id, Tag.name, Tag.description]
     column_searchable_list = [Tag.name, Tag.description]
