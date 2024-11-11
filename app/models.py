@@ -21,6 +21,9 @@ class Tag(SQLModel, table=True):
         back_populates="tags", link_model=DocumentTag
     )
 
+    def __str__(self):
+        return self.name
+
     class Config:
         arbitrary_types_allowed = True  # Allow complex types for relationships
 
@@ -82,6 +85,7 @@ class DocumentSearchResult(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class SearchResponse(BaseModel):
     total: int

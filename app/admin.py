@@ -38,7 +38,7 @@ class DocumentAdmin(ModelView, model=Document):
         Document.description,
         Document.interestingness,
         Document.created_at,
-        "tags",
+        Document.tags,
     ]
     column_searchable_list = [Document.title, Document.description, Document.content]
     column_sortable_list = [
@@ -59,15 +59,7 @@ class DocumentAdmin(ModelView, model=Document):
             0: "⭐ Low",
             1: "⭐⭐ Medium",
             2: "⭐⭐⭐ High",
-        }.get(m.interestingness, "Unknown"),
-        "tags": lambda m, a: Markup(", ".join(
-            [
-                f'<a href="/admin/tag/details/{tag.id}">🏷️ {tag.name}</a>'
-                for tag in m.tags
-                if tag
-            ]
-        ))
-        or "No tags",
+        }.get(m.interestingness, "Unknown")
     }
 
     # Custom labels
