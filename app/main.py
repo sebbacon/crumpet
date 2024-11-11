@@ -46,13 +46,13 @@ app = FastAPI(
 # Add session middleware for admin authentication
 app.add_middleware(SessionMiddleware, secret_key="your-secret-key-here")
 
-# Setup admin interface
-from .admin import setup_admin
-setup_admin(app, engine)
-
 # Database setup
 settings = get_settings()
 engine = create_engine(settings.database_url)
+
+# Setup admin interface
+from .admin import setup_admin
+setup_admin(app, engine)
 
 
 def create_db_and_tables(db_engine=engine):
