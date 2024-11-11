@@ -30,7 +30,7 @@ class ApiKeyAuth(AuthenticationBackend):
 
 class DocumentAdmin(ModelView, model=Document):
     column_list = [Document.id, Document.title, Document.description, 
-                  Document.interestingness, Document.created_at]
+                  Document.interestingness, Document.created_at, "tags"]
     column_searchable_list = [Document.title, Document.description, Document.content]
     column_sortable_list = [Document.id, Document.title, Document.interestingness, 
                           Document.created_at]
@@ -40,26 +40,54 @@ class DocumentAdmin(ModelView, model=Document):
     can_delete = True
     page_size = 20
 
-    # Custom formatting for interestingness
+    # Custom formatting for interestingness and tags
     column_formatters = {
         Document.interestingness: lambda m, a: {
             0: "⭐ Low",
             1: "⭐⭐ Medium",
             2: "⭐⭐⭐ High"
-        }.get(m.interestingness, "Unknown")
+        }.get(m.interestingness, "Unknown"),
+        "tags": lambda m, a: ", ".join([f"🏷️ {tag.name}" for tag in m.tags]) or "No tags"
     }
 
     # Custom labels
     column_labels = {
-        Document.interestingness: "Interest Level"
+        Document.interestingness: "Interest Level",
+        "tags": "Tags"
     }
 
+    # Configure form for creating/editing
+    form_columns = [
+        Document.title, 
+        Document.description, 
+        Document.content,
+        Document.interestingness,
+        "tags"
+    ]
+
 class TagAdmin(ModelView, model=Tag):
-    column_list = [Tag.id, Tag.name, Tag.description]
+    column_list = [Tag.id, Tag.name, Tag.description, "documents"]
     column_searchable_list = [Tag.name, Tag.description]
     can_create = True
     can_edit = True
     can_delete = True
+
+    # Custom formatting for documents
+    column_formatters = {
+        "documents": lambda m, a: f"📄 {len(m.documents)} documents"
+    }
+
+    # Custom labels
+    column_labels = {
+        "documents": "Linked Documents"
+    }
+
+    # Configure form for creating/editing
+    form_columns = [
+        Tag.name,
+        Tag.description,
+        "documents"
+    ]
 
 def setup_admin(app, engine):
     authentication_backend = ApiKeyAuth(secret_key="your-secret-key-here")
