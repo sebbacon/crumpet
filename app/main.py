@@ -2,6 +2,7 @@ from typing import Annotated, List
 from pathlib import Path
 from datetime import datetime
 from fastapi import FastAPI, Depends, HTTPException, Security, Query
+from fastapi.middleware.sessions import SessionMiddleware
 from fastapi.security.api_key import APIKeyHeader
 from contextlib import asynccontextmanager
 from sqlmodel import Session, SQLModel, create_engine, select, func
@@ -41,6 +42,13 @@ servers = [{"url": "https://crumpet.bacon.boutique", "description": "Main server
 app = FastAPI(
     title="Crumpet API", description=description, lifespan=lifespan, servers=servers
 )
+
+# Add session middleware for admin authentication
+app.add_middleware(SessionMiddleware, secret_key="your-secret-key-here")
+
+# Setup admin interface
+from .admin import setup_admin
+setup_admin(app, engine)
 
 # Database setup
 settings = get_settings()
